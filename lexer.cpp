@@ -5,42 +5,38 @@
 
 
 /// **** MAJOR PROBLEM *****
-// *** NEED TO STACK OR STORE FSM STATE SO WHEN WE SEE SEPARATORS LIKE
-//		(identifier1$ == 25) 
-//     WE DONT THROW AN ERROR BECAUSE WE SEE SEPARATOR THEN IDENTIFIER... OR
-//     WE COULD JUST HARD CODE THIS POSSIBILITY AND TRY TO THINK OF EVERY 
-//     POSSIBLE OUTCOME AND CODE IT... OR SET A FLAG THAT WE ARE INSIDE A 
-//     SEPARATOR OR COMMENT (IF FLAG IS SET AND WE FIND A CLOSING SEPARATOR OR
-//     JUST A ! THEN WE CHECK FLAG AND IF ), OR } FOUND AND FLAGS NOT SET, THROW 
-//     ERROR AND FOR THE COMMENT WE KNOW WHAT STATE IT SHOULD BE IN. SO IF FLAG 
-//     IS SET AND ! FOUND THEN WE KNOW STATE IS INITIAL_STATE ELSE ITS INSIDE
-//     INSIDE_COMMENT
+// *** ADDED STACK TO STORE FSM STATE SO WHEN WE SEE SEPARATORS LIKE
+//		({identifier1$ == 25})
+//     WE KNOW WE HAVE BALANCED BRACES 
 // ****not sure if needed if we will append all tokens to a list and return or 
 // print them here
 // **** CAN WE USE VECTOR LIKE AN ARRAY, dynamic array??
+// *** DO WE NEED TO LOOK FOR UNMATCHING SEPARATORS???
 
 #include <cctype>
 #include <fstream>
 #include <iostream>		
+#include <stack>
 #include <string>
 
-const int KEYWORDS_AMOUNT   = 12;
-const int SEPARATOR_AMOUNT  = 6;
+const int KEYWORDS_AMOUNT = 12;
+const int OPEN_SEPARATOR_AMOUNT = 3;
+const int CLOSED_SEPARATOR_AMOUNT = 4; 
 const int WHITESPACE_AMOUNT = 3;
-
+ 
 // stores all keywords available in RAT18S
-// ***SHOULD PROBABLY MAKE THIS A VECTOR OF STRINGS
 // THIS MUST BE SORTED!!!
 const std::string KEYWORDS[KEYWORDS_AMOUNT] = {"BOOLEAN", "ELSE", "ENDIF", "FALSE", 
 					       "GET", "IF", "INT", "PUT", "REAL", 
 					       "RETURN", "TRUE", "WHILE"}; 
 
 // stores all separators available in RAT18S
-// ***SHOULD PROBABLY MAKE THIS A VECTOR OF CHARS
-const char SEPARATORS[SEPARATOR_AMOUNT] = {';' , '(' , ')' , '{' , '}', '%' };
+const char OPEN_SEPARATORS[OPEN_SEPARATOR_AMOUNT] = {'(' , '{' , '%' };
+
+// stores all closing separators available in RAT18S
+const char CLOSED_SEPARATORS[CLOSED_SEPARATOR_AMOUNT] = {';' , ')' , '}' , '%'};
 
 // stores all legal whitespace characters available in RAT18S
-// ***SHOULD PROBABLY MAKE THIS A VECTOR OF CHARS
 const char WHITESPACES[WHITESPACE_AMOUNT] = {' ', '\t', '\n'};
 
 // stores every other state of our FSM (Finite State Machine)
@@ -107,6 +103,10 @@ enum ERROR
 };
 
 
+// stores all states that need to be saved
+std::stack<STATES> STATES_STACK;
+
+
 bool checkComments(const char curChar, STATES& curState);
 bool checkIdentifier(const char curChar, STATES& curState);
 bool checkKeyword(const std::string curToken, STATES& curState);
@@ -117,7 +117,8 @@ ERROR handleError(const STATES curState);
 void lexer(const std::ifstream& source); // this function should return a list 
 					 //  of tokens or print them inside it
 bool isAcceptingState(const STATES curState);
-bool isSeparator(const char curChar);
+bool isOpenSeparator(const char curChar);
+bool isClosedSeparator(const char curChar);
 bool isWhiteSpace(const char curChar);
 
 
@@ -127,7 +128,16 @@ int main()
 //	std::string myStr;
 //	std::cout << "max string size is " << myStr.max_size() << std::endl;
 // 	its size is 2^64 so i guess it depends also on operating system
-	return 0;
+/*	std::stack<int> myStack;
+	myStack.push(10);
+	myStack.push(20);
+	myStack.push(30);
+	std::cout << "Stack size is " << myStack.size() << std::endl;
+	myStack.pop();
+	myStack.pop();
+	myStack.pop();
+	std::cout << "Stack size is " << myStack.size() << std::endl;
+*/	return 0;
 }
 
 //==============================================================================
@@ -340,7 +350,7 @@ bool checkNumber(const char curChar, STATES& curState)
 		curState = END_REAL;
 		return true;
 	}	
-	else if (isWhiteSpace(curChar) || isSeparator(curChar))
+	else if (isWhiteSpace(curChar) || isOpenSeparator(curChar))
 	{
 		if (curState == INSIDE_NUMBER)
 		{
@@ -517,7 +527,13 @@ bool checkOperators(const char curChar, STATES& curState)
 //==============================================================================
 bool checkSeparators(const char curChar, STATES& curState)
 {
-	if (isSeparator(curChar) && curState == INITIAL_STATE)
+	// look at past FSM (Finite State Machine) states to determine next step
+	if (!STATES_STACK.empty())
+	{
+		curState = STATES_STACK.top();
+	}
+
+	if (isOpenSeparator(curChar) && curState == INITIAL_STATE)
 	{
 		// found the first part of a separator character
 		if (curChar == '%')
@@ -532,12 +548,51 @@ bool checkSeparators(const char curChar, STATES& curState)
 			return true;
 		}
 	}
-	else if ((isSeparator(curChar) && curState == INSIDE_SEPARATOR) ||
+	else if ((isClosedSeparator(curChar) && curState == INSIDE_SEPARATOR) ||
 		 (curChar == '%'&& curState == PERCENT_SEPARATOR))
 	{
 		// found the closing part of a separator character
+	
+		// check if we have any past open separators to close
+		if (!STATES_STACK.empty())
+		{
+			// pop the past FSM (Finite State Machine) state to the 
+			//  current state 
+			STATES_STACK.pop();
+			return false;
+		}	
+
 		curState = END_SEPARATOR;
 		return true;
+	}
+	else if (isOpenSeparator(curChar) && curState == INSIDE_SEPARATOR)
+	{
+		// need ot save the curState
+		STATES_STACK.push(curState);		
+
+		//   set curState to INITIAL
+		curState = INITIAL_STATE;
+
+		return false;
+	}
+	else if (isClosedSeparator(curChar) && curState == INITIAL_STATE)
+	{
+		// since we found a closed separators on INITIAL_STATE we
+		//  may have had some past open separators
+		if (!STATES_STACK.empty())
+		{
+			// pop the past FSM (Finite State Machine) state to the
+			// current state
+			curState = STATE_STACK.pop();
+			return true;
+		}
+		else
+		{
+			// we have unmatched separators
+			ERROR error = handleError(INSIDE_SEPARATOR);
+			// ***NEED TO PRINT ERROR???
+			return false;
+		}
 	}
 	else
 	{
@@ -645,10 +700,10 @@ bool isAcceptingState(const STATES curState)
 	return false;
 }
 
-
 //==============================================================================
 // Description: This function will determine if the char passed by argument is
-//		a legal separator in the RAT18S language.
+//		a legal closinging separator (ex. ')', '}') in the RAT18S 
+//		language.
 // 
 // Input: curChar - the current char we are testing to determine if its a 
 //		    legal separator character.
@@ -657,11 +712,33 @@ bool isAcceptingState(const STATES curState)
 //	   false - curChar is an illegal separator character for RAT18S.
 //
 //==============================================================================
-bool isSeparator(const char curChar)
+bool isClosedSeparator(const char curChar)
 {
-	for (int i = 0; i < SEPARATOR_AMOUNT; i++)
+	for (int i = 0; i < CLOSED_SEPARATOR_AMOUNT; i++)
 	{
-		if (curChar == SEPARATORS[i])	return true;
+		if (curChar == CLOSED_SEPARATORS[i])	return true;
+	}
+
+	return false;
+}
+
+
+//==============================================================================
+// Description: This function will determine if the char passed by argument is
+//		a legal opening separator (ex. '(', '{') in the RAT18S language.
+// 
+// Input: curChar - the current char we are testing to determine if its a 
+//		    legal separator character.
+//
+// Output: true - curChar is a legal separator character for RAT18S.
+//	   false - curChar is an illegal separator character for RAT18S.
+//
+//==============================================================================
+bool isOpenSeparator(const char curChar)
+{
+	for (int i = 0; i < OPEN_SEPARATOR_AMOUNT; i++)
+	{
+		if (curChar == OPEN_SEPARATORS[i])	return true;
 	}
 
 	return false;
