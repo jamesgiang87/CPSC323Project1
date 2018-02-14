@@ -3,37 +3,35 @@
 // Class: CPSC 323 Compilers & Languages
 //*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
 
-/// **** MAJOR PROBLEM *****
-// *** ADDED STACK TO STORE FSM STATE SO WHEN WE SEE SEPARATORS LIKE
-//		({identifier1$ == 25})
-//     WE KNOW WE HAVE BALANCED BRACES 
-// *** NEED STRUCTURE TO RETURN TOKEN WITH LEXEMES
-// print them here
-// **** CAN WE USE VECTOR LIKE AN ARRAY, dynamic array??
-// *** DO WE NEED TO LOOK FOR UNMATCHING SEPARATORS???
-
+// !!! NOTES !!!
+// !!! CIN AUTOMATICALLY EXTRACTS ALL CHARACTERS EXCLUDING WHITESPACE BUT IVE BEEN MANAGING THIS PROBLEM BY 
+// !!!  EXTRACTING ONE CHARACTER AT A TIME SO IM NOT SURE MY ALGORITHM/MACHINE WOULD WORK
+// 
 // **** NEED TO DO ****
-// *** ADD FUNCTIONALITY TO MOVE FILE POINTER BACKWARDS BEFORE ADDING CHARACTER TO TOKEN (can only happen with whitespace,
-//	operators and separators)
-// *** NEED TO REMOVE STACK BALANCED BRACES
-// *** COMBINE ALL SEPERATOR ARRAYS TOGETHER (DELETE EXTRA FUNCTIONS FOR THAT)
+// *** ADD FUNCTIONALITY TO MOVE FILE POINTER BACKWARDS BEFORE ADDING CHARACTER TO TOKEN (can only happen
+//	with whitespace, operators and separators)
 // *** CHECK IDENTIFIER FSM LOGIC
-// *** NEED TO REMOVE isWhiteSpace() functions from FSMs
 // *** CAPATALIZE ALL CHARACTERS IN FILE EXCEPT COMMENTS OR ""
-// *** NEED TO ADD STURCTURE TO RETURN TOKEN ALONG WITH LEXEMES
-// *** NEED TO KEEP TRACK OF LINE NUMBER AND COLUMN NUMBER... WHEN ERROR ACCURS PRINT LINE NUMBER AND COLUMN #
-//     ALONG WITH THE TOKEN THAT WAS MESSED UP IF ITS NOT A MISSING SEPARATOR OR COMMENT
+
+// $$$ CHANGES MADE $$$
+// $$$ COMBINED ALL SEPARATORS TOGETHER AND REMOVES EXCESS FUNCTIONS
+// $$$ DONT CHECK FOR BALANCED BRACES ANYMORE
+// $$$ ADDED TOKEN_TYPE ENUM TYPE AND ADDED TOKEN STRUCTURE
+// $$$ ADDED A PRINT ERROR FUNCTION
+// $$$ REMOVED UNCLOSED SEPARATOR FROM ERROR ENUM
+// $$$ REMOVED UNCLOSED COMMENT FROM ERROR ENUM
+// $$$ ADDED GLOBAL LINE NUMBER AND COLUMN NUMBER VARIABLES
+// $$$ ADDED checkBackup function
+// $$$ CHANGED ERROR HANDLING TO THROWING ERROR MUST BE HANDLED IN LEXER FUNCTION
+// $$$ MADE IT SO THAT checkBackup checks if token is found when there is whitespace
+
 
 #include <cctype>
 #include <fstream>
 #include <iostream>		
-#include <stack>
 #include <string>
 
-const int KEYWORDS_AMOUNT = 12;
-const int OPEN_SEPARATOR_AMOUNT = 3;
-const int CLOSED_SEPARATOR_AMOUNT = 4; 
-const int WHITESPACE_AMOUNT = 3;
+
  
 // stores all keywords available in RAT18S
 // THIS MUST BE SORTED!!!
@@ -42,10 +40,7 @@ const std::string KEYWORDS[KEYWORDS_AMOUNT] = {"BOOLEAN", "ELSE", "ENDIF", "FALS
 					       "RETURN", "TRUE", "WHILE"}; 
 
 // stores all separators available in RAT18S
-const char OPEN_SEPARATORS[OPEN_SEPARATOR_AMOUNT] = {'(' , '{' , '%' };
-
-// stores all closing separators available in RAT18S
-const char CLOSED_SEPARATORS[CLOSED_SEPARATOR_AMOUNT] = {';' , ')' , '}' , '%'};
+const char SEPARATORS[SEPARATOR_AMOUNT] = {';' , '(' , ')' , '{' , '}' , '%' };
 
 // stores all legal whitespace characters available in RAT18S
 const char WHITESPACES[WHITESPACE_AMOUNT] = {' ', '\t', '\n'};
@@ -100,12 +95,6 @@ enum ERROR
 	//ERRORS FOR OPERATORS
 	INVALID_OPERATOR,	// Ex **, ++, --
 
-	//ERRORS FOR SEPARATORS
-	UNCLOSED_SEPARATOR,	//Ex {only, ( only, ((), (%, {%, [
-
-	//ERRORS FOR COMMENTS
-	UNCLOSED_COMMENT,	//Ex !only, !!!
-
 	//ERRORS FOR SYMBOLS
 	INVALID_SYMBOL,		//Ex @, #, &
 
@@ -114,47 +103,124 @@ enum ERROR
 };
 
 
-// stores all states that need to be saved
-std::stack<STATES> STATES_STACK;
+// stores the different types a token can be
+enum TOKEN_TYPE
+{
+	IDENTIFIER,
+	INT,
+	REAL,
+	OPERATOR,
+	SEPARATOR,
+	COMMENT,
+	SYMBOL,
+	ERROR		// *** NOT SURE IF THIS IS NEEDED
+};
 
 
+struct TOKEN
+{
+	TOKEN_TYPE tokenType;	// store the type of token was found (ex. Real, Int, Separator)
+	std::string lexeme;	// store the actual instance of the token
+};
+
+
+const int KEYWORDS_AMOUNT = 12;
+const int SEPARATOR_AMOUNT = 6;
+const int WHITESPACE_AMOUNT = 3;
+int CURRENT_LINE_NUMBER   = 0;
+int CURRENT_COLUMN_NUMBER = 0;
+
+bool checkBackup(const char curChar, const STATES& curState);
 bool checkComments(const char curChar, STATES& curState);
 bool checkIdentifier(const char curChar, STATES& curState);
 bool checkKeyword(const std::string curToken, STATES& curState);
 bool checkNumber(const char curChar, STATES& curState);
 bool checkOperators(const char curChar, STATES& curState);
 bool checkSeparators(const char curChar, STATES& curState);
-ERROR handleError(const STATES curState);
+ERROR DetermineError(const STATES curState);
 void lexer(const std::ifstream& source); // this function should return a list 
 					 //  of tokens or print them inside it
 bool isAcceptingState(const STATES curState);
-bool isOpenSeparator(const char curChar);
-bool isClosedSeparator(const char curChar);
+bool isSeparator(const char curChar);
 bool isWhiteSpace(const char curChar);
+void printError(const int lineNum, const int colmNum, const std::string token, const ERROR errorType);
 
 
 
-int main()
-{
-//	std::string myStr;
-//	std::cout << "max string size is " << myStr.max_size() << std::endl;
-// 	its size is 2^64 so i guess it depends also on operating system
-/*	std::stack<int> myStack;
-	myStack.push(10);
-	myStack.push(20);
-	myStack.push(30);
-	std::cout << "Stack size is " << myStack.size() << std::endl;
-	myStack.pop();
-	myStack.pop();
-	myStack.pop();
-	std::cout << "Stack size is " << myStack.size() << std::endl;
-*/	return 0;
+//==============================================================================
+// Description: This function will check the given character recieved from the
+//		source file and compare it with the current FSM (Finite State
+//		Machine) and change the state if it determines it needs to back 
+//		up the current file pointer. If the current file pointer needs 
+//		to be backed up this function will back it up. If the FSM
+//		(Finite State Machine) is will throw an ERROR type.
+//
+// Input: curChar - the current character taken from the source file for 
+//		    evaluation.
+//	  curState - the current state the FSM (Finite State Machine) is in.
+//
+// Output: true - the file pointer was backed up. 
+//	   false - the file pointer was not backed up.
+//
+//==============================================================================
+// ***NOT SURE IF THIS ACTUALLY NEEDS TO BE BOOL
+bool checkBackup(const char curChar, STATES& curState)
+{// ***POTENTIALLY UNFINISHED
+
+	bool pushBack = false;		// determines if file pointer needs
+					//  to be pushed back
+
+	if (isWhiteSpace(curChar) || isSeparator(curChar) || isOperator(curChar))
+	{
+		switch(curState)
+		{
+
+			// cases for IDENTIFIERS
+			case COULD_END_IDENTIFIER:
+				// we have just found out that it is an
+				//  identifier so label as accepted
+				curState = END_IDENTIFIER;
+				pushBack = true;
+				break;
+
+			// cases for NUMBERS
+			case INSIDE_NUMBER:
+				// we have just found out that its is not a
+				//  number anymore so we label it as accepted
+				curState = END_INT;
+				pushBack = true;
+				break;
+
+			case COULD_END_REAL:
+				// we just found out that it is a real number
+				//  so we label it as an accepting state
+				curState = END_REAL;
+				pushBack = true;
+				break;
+	
+			// not sure ABOUT OPERATORS....
+			// dont need it for separatros or comments because we
+			//  know when we find the second one it is accepted
+			default:
+				// we need to throw error
+				throw handleError(curState);
+		}
+
+		if (pushBack)
+		{
+			// ***NEED TO PUSHBACK THE FILE POINTER
+		}
+	}
+
+	return false;
 }
+
+
 
 //==============================================================================
 // Description: This function will check and change the FSM (Finite State 
 //		Machine) state if the current character from the source file is 
-//		apart of a comment else it will issue an error.
+//		apart of a comment else it will throw an ERROR type.
 //
 // Input: curChar - the current character taken from the source file for 
 //		    evaluation.
@@ -183,9 +249,7 @@ bool checkComments(const char curChar, STATES& curState)
 	else if (curChar == '!')
 	{
 		// an unmatch ! has been found
-		ERROR error = handleError(curState);
-		// ***NEED TO PRINT ERROR??
-		return false;
+		throw handleError(curState);
 	}
 
 	return false;
@@ -195,7 +259,7 @@ bool checkComments(const char curChar, STATES& curState)
 //==============================================================================
 // Description: This function will check and change the FSM (Finite State
 //		Machine) state if the current character is apart of a legal
-//		identifier else it will issue an error.
+//		identifier else it will throw an ERROR type.
 //
 // Input: curChar - the current character taken from the source file for 
 //		    evaluation.
@@ -207,8 +271,6 @@ bool checkComments(const char curChar, STATES& curState)
 //==============================================================================
 bool checkIdentifier(const char curChar, STATES& curState)
 {
-	//***IF YOU HAVE BETTER MORE SIMPLISTIC LOGIC PLEASE TELL ME
-	
 	if (std::isalpha(curChar))
 	{
 		if (curState == INITIAL_STATE || curState == INSIDE_IDENTIFIER 
@@ -222,9 +284,7 @@ bool checkIdentifier(const char curChar, STATES& curState)
 		else
 		{
 			// found a letter in an illegal state
-			ERROR error = handleError(curState);
-			// ***NEED TO PRINT ERROR???
-			return false;
+			throw handleError(curState);
 		}
 	}
 	else if(curChar == '$')
@@ -239,9 +299,7 @@ bool checkIdentifier(const char curChar, STATES& curState)
 		else
 		{
 			// found a $ in an illegal state
-			ERROR error = handleError(curState);
-			// ***NEED TO PRINT ERROR???
-			return false;
+			throw handleError(curState);
 		}
 	}
 	else if(std::isdigit(curChar) && (curState == INSIDE_IDENTIFIER 
@@ -254,11 +312,6 @@ bool checkIdentifier(const char curChar, STATES& curState)
 
 		// we do not throw an error because if a digit is found
 		// if may be apart of an integer or real number
-	}
-	else if(isWhiteSpace(curChar) && curState == COULD_END_IDENTIFIER)
-	{
-		curState = END_IDENTIFIER;
-		return true;
 	}
 	
 	return false;
@@ -349,9 +402,7 @@ bool checkNumber(const char curChar, STATES& curState)
 		}
 		else
 		{
-			ERROR error = handleError(curState);
-			// ***NEED TO PRINT ERROR?
-			return false;
+			throw handleError(curState);
 		}
 	}
 	else if (isDigit && (curState == INSIDE_REAL || curState == COULD_END_REAL))
@@ -359,21 +410,6 @@ bool checkNumber(const char curChar, STATES& curState)
 		// a digit followed after the '.' and possibly more digits found
 		curState = COULD_END_REAL;
 		return true;
-	}
-	else if (isWhiteSpace(curChar) || isOpenSeparator(curChar) || NEED TO ADD OPERATORS HERE)
-	{
-		if (curState == INSIDE_NUMBER)
-		{
-			//if all has been found is numbers then its an integer
-			curState = END_INT;
-			return true;
-		}
-		else if (curState == COULD_END_REAL)
-		{
-			//digit then '.' then digit has been found
-			curState = END_REAL;
-			return true;
-		}
 	}
 	
 	return false;
@@ -410,9 +446,7 @@ bool checkOperators(const char curChar, STATES& curState)
 			}
 			else
 			{	// invalid symbol found in wrong state
-				ERROR error = handleError(curState);
-				// ***NEED TO PRINT ERROR???
-				return false;	
+				throw handleError(curState);
 			}
 
 			break;
@@ -429,9 +463,7 @@ bool checkOperators(const char curChar, STATES& curState)
 			else
 			{
 				// invalid symbol found in wrong state
-				ERROR error = handleError(curState);
-				// ***NEED TO PRINT ERROR???
-				return false;
+				throw handleError(curState);
 			}
 
 			break;
@@ -453,9 +485,7 @@ bool checkOperators(const char curChar, STATES& curState)
 			else
 			{
 				// invalid symbol found in wrong state
-				ERROR error = handleError(curState);
-				// ***NEED TO PRINT ERROR???
-				return false;
+				throw handleError(curState);
 			}
 
 			break;
@@ -482,40 +512,13 @@ bool checkOperators(const char curChar, STATES& curState)
 			else
 			{
 				// invalid symbol found in wrong state
-				ERROR error = handleError(curState);
-				// ***NEED TO PRINT ERROR???
-				return false;
+				throw handleError(curState);
 			}
 
 			break;
 
-		case ' ':
-		case '\t':
-		case '\n':
-			// state only become END_OPERATOR when it sees 
-			//  whitespace after the operator.. so that we dont
-			//  have === instances and this could happend because
-			//  it read the first two == and says END_OPERATOR
-			//  but the next char is = therefore making it illegal
-			if (curState == POTENTIAL_OPERATOR 
-			 || curState == EQUAL_OPERATOR)
-			{
-				// need this case for +, -, /, *, =, >, or <
-				curState = END_OPERATOR;
-				return true;
-			}
-		 	else if (curState == END_OPERATOR)
-			{	// should never execute	
-				// nothing to do already know its in an 
-				//  accepting state
-				return false;
-			}
-		
-			break;
-		
 		default:
-			ERROR error = handleError(curState);
-			return false;
+			throw handleError(curState);
 	}
 	
 	return false;
@@ -537,13 +540,7 @@ bool checkOperators(const char curChar, STATES& curState)
 //==============================================================================
 bool checkSeparators(const char curChar, STATES& curState)
 {
-	// look at past FSM (Finite State Machine) states to determine next step
-	if (!STATES_STACK.empty())
-	{
-		curState = STATES_STACK.top();
-	}
-
-	if (isOpenSeparator(curChar) && curState == INITIAL_STATE)
+	if (isSeparator(curChar) && curState == INITIAL_STATE)
 	{
 		// found the first part of a separator character
 		if (curChar == '%')
@@ -558,58 +555,17 @@ bool checkSeparators(const char curChar, STATES& curState)
 			return true;
 		}
 	}
-	else if ((isClosedSeparator(curChar) && curState == INSIDE_SEPARATOR) ||
+	else if ((isSeparator(curChar) && curState == INSIDE_SEPARATOR) ||
 		 (curChar == '%'&& curState == PERCENT_SEPARATOR))
 	{
 		// found the closing part of a separator character
-	
-		// check if we have any past open separators to close
-		if (!STATES_STACK.empty())
-		{
-			// pop the past FSM (Finite State Machine) state to the 
-			//  current state 
-			STATES_STACK.pop();
-			return false;
-		}	
-
 		curState = END_SEPARATOR;
 		return true;
-	}
-	else if (isOpenSeparator(curChar) && curState == INSIDE_SEPARATOR)
-	{
-		// need ot save the curState
-		STATES_STACK.push(curState);		
-
-		//   set curState to INITIAL
-		curState = INITIAL_STATE;
-
-		return false;
-	}
-	else if (isClosedSeparator(curChar) && curState == INITIAL_STATE)
-	{
-		// since we found a closed separators on INITIAL_STATE we
-		//  may have had some past open separators
-		if (!STATES_STACK.empty())
-		{
-			// pop the past FSM (Finite State Machine) state to the
-			// current state
-			curState = STATE_STACK.pop();
-			return true;
-		}
-		else
-		{
-			// we have unmatched separators
-			ERROR error = handleError(INSIDE_SEPARATOR);
-			// ***NEED TO PRINT ERROR???
-			return false;
-		}
 	}
 	else
 	{
 		// separator was found in an invalid state
-		ERROR error = handleError(curState);
-		// ***NEED TO PRINT ERROR???
-		return false;
+		throw handleError(curState);
 	}
 
 	return false;
@@ -628,7 +584,7 @@ bool checkSeparators(const char curChar, STATES& curState)
 //		   occured.
 //
 //==============================================================================
-ERROR handleError(const STATES curState)
+ERROR DetermineError(const STATES curState)
 {
 	switch(curState)
 	{
@@ -712,8 +668,7 @@ bool isAcceptingState(const STATES curState)
 
 //==============================================================================
 // Description: This function will determine if the char passed by argument is
-//		a legal closinging separator (ex. ')', '}') in the RAT18S 
-//		language.
+//		a legal separator in the RAT18S language.
 // 
 // Input: curChar - the current char we are testing to determine if its a 
 //		    legal separator character.
@@ -722,33 +677,11 @@ bool isAcceptingState(const STATES curState)
 //	   false - curChar is an illegal separator character for RAT18S.
 //
 //==============================================================================
-bool isClosedSeparator(const char curChar)
+bool isSeparator(const char curChar)
 {
-	for (int i = 0; i < CLOSED_SEPARATOR_AMOUNT; i++)
+	for (int i = 0; i < SEPARATOR_AMOUNT; i++)
 	{
-		if (curChar == CLOSED_SEPARATORS[i])	return true;
-	}
-
-	return false;
-}
-
-
-//==============================================================================
-// Description: This function will determine if the char passed by argument is
-//		a legal opening separator (ex. '(', '{') in the RAT18S language.
-// 
-// Input: curChar - the current char we are testing to determine if its a 
-//		    legal separator character.
-//
-// Output: true - curChar is a legal separator character for RAT18S.
-//	   false - curChar is an illegal separator character for RAT18S.
-//
-//==============================================================================
-bool isOpenSeparator(const char curChar)
-{
-	for (int i = 0; i < OPEN_SEPARATOR_AMOUNT; i++)
-	{
-		if (curChar == OPEN_SEPARATORS[i])	return true;
+		if (curChar == SEPARATORS[i])	return true;
 	}
 
 	return false;
@@ -776,6 +709,55 @@ bool isWhiteSpace(const char curChar)
 	return false;
 }
 
+
+
+//==============================================================================
+// Description: This function will print out a given Error along with the 
+//		possible token we believe is in error as well as what line 
+//		number and column number this error can be found.
+//
+// Input: lineNum   - the line the error was found on
+//	  colmNum   - the column the error was found on
+//	  token     - the token we believe is in error
+//	  errorType - the type of error that was caused
+//
+// Output: NONE
+//
+//==============================================================================
+void printError(const int lineNum, const int colmNum, const std::string token, 
+		const ERROR errorType)
+{
+
+	std::cout << lineNum << ":" << colmNum << " error: ";
+
+	switch(errorType)
+	{
+		case INVALID_IDENTIFIER:
+			std::cout << " invalid identifier." << std::endl;
+			break;
+					
+		case INVALID_INT:
+			std::cout << " invalid integer." << std::endl;
+			break;
+				
+		case INVALID_REAL:
+			std::cout << " invalid real." << std::endl;
+			break;
+			
+		case INVALID_OPERATOR:
+			std::cout << " invalid operator." << std::endl;
+			break;
+
+		case INVALID_SYMBOL:
+			std::cout << " invalid symbol." << std::endl;
+			break;
+	
+		default:
+			 // unknown error
+			std::cout << " unknown error occured." << std::endl;
+			break;
+	}
+}
 
 
 
