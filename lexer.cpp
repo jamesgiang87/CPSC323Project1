@@ -10,27 +10,15 @@
 // **** NEED TO DO ****
 // *** ADD FUNCTIONALITY TO MOVE FILE POINTER BACKWARDS BEFORE ADDING CHARACTER TO TOKEN (can only happen
 //	with whitespace, operators and separators)
-// *** CHECK IDENTIFIER FSM LOGIC
+// *** ADD LINE NUMBER AND COLUMN NUMBER VARIABLES TO KEEP TRACK IN LEXER()
 // *** CAPATALIZE ALL CHARACTERS IN FILE EXCEPT COMMENTS OR ""
-
-// $$$ CHANGES MADE $$$
-// $$$ COMBINED ALL SEPARATORS TOGETHER AND REMOVES EXCESS FUNCTIONS
-// $$$ DONT CHECK FOR BALANCED BRACES ANYMORE
-// $$$ ADDED TOKEN_TYPE ENUM TYPE AND ADDED TOKEN STRUCTURE
-// $$$ ADDED A PRINT ERROR FUNCTION
-// $$$ REMOVED UNCLOSED SEPARATOR FROM ERROR ENUM
-// $$$ REMOVED UNCLOSED COMMENT FROM ERROR ENUM
-// $$$ ADDED GLOBAL LINE NUMBER AND COLUMN NUMBER VARIABLES
-// $$$ ADDED checkBackup function
-// $$$ CHANGED ERROR HANDLING TO THROWING ERROR MUST BE HANDLED IN LEXER FUNCTION
-// $$$ MADE IT SO THAT checkBackup checks if token is found when there is whitespace
+// *** PLEASE CHECK FSM LOGIC!!!
 
 
 #include <cctype>
 #include <fstream>
 #include <iostream>		
 #include <string>
-
 
  
 // stores all keywords available in RAT18S
@@ -52,7 +40,8 @@ enum STATES
 
 	//STATES FOR IDENTIFIERS
 	INSIDE_IDENTIFIER,	// only when it sees a digit after letter
-	COULD_END_IDENTIFIER,	// only last letter, $ or letter in the middle
+	COULD_END_IDENTIFIER,	// only last letter, or letter in the middle
+	DOLLAR_IDENTIFIER,	// only last character can be $ if its found
 	END_IDENTIFIER,		// AN ACCEPTING STATE IDENTIFIERS
 	
 	//STATES FOR NUMBERS
@@ -124,26 +113,24 @@ struct TOKEN
 };
 
 
-const int KEYWORDS_AMOUNT = 12;
-const int SEPARATOR_AMOUNT = 6;
+const int KEYWORDS_AMOUNT   = 12;
+const int SEPARATOR_AMOUNT  = 6;
 const int WHITESPACE_AMOUNT = 3;
-int CURRENT_LINE_NUMBER   = 0;
-int CURRENT_COLUMN_NUMBER = 0;
 
-bool checkBackup(const char curChar, const STATES& curState);
-bool checkComments(const char curChar, STATES& curState);
-bool checkIdentifier(const char curChar, STATES& curState);
-bool checkKeyword(const std::string curToken, STATES& curState);
-bool checkNumber(const char curChar, STATES& curState);
-bool checkOperators(const char curChar, STATES& curState);
-bool checkSeparators(const char curChar, STATES& curState);
+bool CheckBackup(const char curChar, const STATES& curState);
+bool CheckComments(const char curChar, STATES& curState);
+bool CheckIdentifier(const char curChar, STATES& curState);
+bool CheckKeyword(const std::string curToken, STATES& curState);
+bool CheckNumber(const char curChar, STATES& curState);
+bool CheckOperators(const char curChar, STATES& curState);
+bool CheckSeparators(const char curChar, STATES& curState);
 ERROR DetermineError(const STATES curState);
-void lexer(const std::ifstream& source); // this function should return a list 
+void Lexer(const std::ifstream& source); // this function should return a list 
 					 //  of tokens or print them inside it
-bool isAcceptingState(const STATES curState);
-bool isSeparator(const char curChar);
-bool isWhiteSpace(const char curChar);
-void printError(const int lineNum, const int colmNum, const std::string token, const ERROR errorType);
+bool IsAcceptingState(const STATES curState);
+bool IsSeparator(const char curChar);
+bool IsWhiteSpace(const char curChar);
+void PrintError(const int lineNum, const int colmNum, const std::string token, const ERROR errorType);
 
 
 
@@ -164,7 +151,7 @@ void printError(const int lineNum, const int colmNum, const std::string token, c
 //
 //==============================================================================
 // ***NOT SURE IF THIS ACTUALLY NEEDS TO BE BOOL
-bool checkBackup(const char curChar, STATES& curState)
+bool CheckBackup(const char curChar, STATES& curState)
 {// ***POTENTIALLY UNFINISHED
 
 	bool pushBack = false;		// determines if file pointer needs
@@ -177,6 +164,7 @@ bool checkBackup(const char curChar, STATES& curState)
 
 			// cases for IDENTIFIERS
 			case COULD_END_IDENTIFIER:
+			case DOLLAR_IDENTIFIER:
 				// we have just found out that it is an
 				//  identifier so label as accepted
 				curState = END_IDENTIFIER;
@@ -197,8 +185,25 @@ bool checkBackup(const char curChar, STATES& curState)
 				curState = END_REAL;
 				pushBack = true;
 				break;
-	
-			// not sure ABOUT OPERATORS....
+		
+			// cases for OPERATORS
+				// not all operators need to be here
+			case POTENTIAL_OPERATOR:
+			case EQUAL_OPERATOR:
+				
+				// we have just found a > or < and IT MUST BE A SPACE
+				if (!isOperator(curChar))
+				{
+					curState = END_OPERATOR;
+					pushBack = true;
+				}
+				else
+				{
+					throw determineError(curState);
+				}
+				
+				break;
+				
 			// dont need it for separatros or comments because we
 			//  know when we find the second one it is accepted
 			default:
@@ -230,7 +235,7 @@ bool checkBackup(const char curChar, STATES& curState)
 //	   false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool checkComments(const char curChar, STATES& curState)
+bool CheckComments(const char curChar, STATES& curState)
 {
 	if(curChar == '!' && curState == INITIAL_STATE)
 	{	
@@ -269,38 +274,23 @@ bool checkComments(const char curChar, STATES& curState)
 //	   false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool checkIdentifier(const char curChar, STATES& curState)
+bool CheckIdentifier(const char curChar, STATES& curState)
 {
-	if (std::isalpha(curChar))
+	if (std::isalpha(curChar) && (curState == INITIAL_STATE 
+	  || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
 	{
-		if (curState == INITIAL_STATE || curState == INSIDE_IDENTIFIER 
-	 	 || curState == COULD_END_IDENTIFIER)
-		{
-			// identifiers must lead with a letter or end with a
-			// letter with the exception of ending with a $
-			curState = COULD_END_IDENTIFIER;
-			return true;
-		}
-		else
-		{
-			// found a letter in an illegal state
-			throw handleError(curState);
-		}
+		// identifiers must lead with a letter or end with a
+		// letter with the exception of ending with a $
+		curState = COULD_END_IDENTIFIER;
+		return true;
+		
 	}
-	else if(curChar == '$')
+	else if(curChar == '$' && curState == COULD_END_IDENTIFIER)
 	{  
-		if (curState == COULD_END_IDENTIFIER)
-		{
-			// a $ cannot appear at the front of an identifier
-			// only inside or at the end of an identifier
-			curState = COULD_END_IDENTIFIER;
-			return true;
-		}
-		else
-		{
-			// found a $ in an illegal state
-			throw handleError(curState);
-		}
+		// a $ cannot appear at the front of an identifier
+		// only inside or at the end of an identifier
+		curState = DOLLAR_IDENTIFIER;
+		return true;
 	}
 	else if(std::isdigit(curChar) && (curState == INSIDE_IDENTIFIER 
 				 || curState == COULD_END_IDENTIFIER))
@@ -312,6 +302,11 @@ bool checkIdentifier(const char curChar, STATES& curState)
 
 		// we do not throw an error because if a digit is found
 		// if may be apart of an integer or real number
+	}
+	else
+	{
+		//found an $ or letter in an illegal state
+		throw handleError(curState);
 	}
 	
 	return false;
@@ -330,7 +325,7 @@ bool checkIdentifier(const char curChar, STATES& curState)
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool checkKeyword(const std::string curToken, STATES& curState)
+bool CheckKeyword(const std::string curToken, STATES& curState)
 {
 	// highest index of the list we are searching
 	int maxIndex = KEYWORDS_AMOUNT;	
@@ -377,7 +372,7 @@ bool checkKeyword(const std::string curToken, STATES& curState)
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool checkNumber(const char curChar, STATES& curState)
+bool CheckNumber(const char curChar, STATES& curState)
 {
 	bool isDigit = std::isdigit(curChar);
 
@@ -429,7 +424,7 @@ bool checkNumber(const char curChar, STATES& curState)
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool checkOperators(const char curChar, STATES& curState)
+bool CheckOperators(const char curChar, STATES& curState)
 {
 	switch(curChar)
 	{
@@ -538,7 +533,7 @@ bool checkOperators(const char curChar, STATES& curState)
 //	   false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool checkSeparators(const char curChar, STATES& curState)
+bool CheckSeparators(const char curChar, STATES& curState)
 {
 	if (isSeparator(curChar) && curState == INITIAL_STATE)
 	{
@@ -627,7 +622,7 @@ ERROR DetermineError(const STATES curState)
 
 //==============================================================================
 //==============================================================================
-void lexer(const std::ifstream& source)
+void Lexer(const std::ifstream& source)
 {
 
 }
@@ -647,7 +642,7 @@ void lexer(const std::ifstream& source)
 //		   in an accepting state.
 //
 //==============================================================================
-bool isAcceptingState(const STATES curState)
+bool IsAcceptingState(const STATES curState)
 {
 	switch(curState)
 	{
@@ -677,7 +672,7 @@ bool isAcceptingState(const STATES curState)
 //	   false - curChar is an illegal separator character for RAT18S.
 //
 //==============================================================================
-bool isSeparator(const char curChar)
+bool IsSeparator(const char curChar)
 {
 	for (int i = 0; i < SEPARATOR_AMOUNT; i++)
 	{
@@ -699,7 +694,7 @@ bool isSeparator(const char curChar)
 //	   false - curChar is an illegal whitespace character for RAT18S.
 //
 //==============================================================================
-bool isWhiteSpace(const char curChar)
+bool IsWhiteSpace(const char curChar)
 {
 	for (int i = 0; i < WHITESPACE_AMOUNT; i++)
 	{
@@ -724,7 +719,7 @@ bool isWhiteSpace(const char curChar)
 // Output: NONE
 //
 //==============================================================================
-void printError(const int lineNum, const int colmNum, const std::string token, 
+void PrintError(const int lineNum, const int colmNum, const std::string token, 
 		const ERROR errorType)
 {
 
