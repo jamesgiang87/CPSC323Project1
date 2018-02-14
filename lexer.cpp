@@ -3,15 +3,26 @@
 // Class: CPSC 323 Compilers & Languages
 //*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
 
-
 /// **** MAJOR PROBLEM *****
 // *** ADDED STACK TO STORE FSM STATE SO WHEN WE SEE SEPARATORS LIKE
 //		({identifier1$ == 25})
 //     WE KNOW WE HAVE BALANCED BRACES 
-// ****not sure if needed if we will append all tokens to a list and return or 
+// *** NEED STRUCTURE TO RETURN TOKEN WITH LEXEMES
 // print them here
 // **** CAN WE USE VECTOR LIKE AN ARRAY, dynamic array??
 // *** DO WE NEED TO LOOK FOR UNMATCHING SEPARATORS???
+
+// **** NEED TO DO ****
+// *** ADD FUNCTIONALITY TO MOVE FILE POINTER BACKWARDS BEFORE ADDING CHARACTER TO TOKEN (can only happen with whitespace,
+//	operators and separators)
+// *** NEED TO REMOVE STACK BALANCED BRACES
+// *** COMBINE ALL SEPERATOR ARRAYS TOGETHER (DELETE EXTRA FUNCTIONS FOR THAT)
+// *** CHECK IDENTIFIER FSM LOGIC
+// *** NEED TO REMOVE isWhiteSpace() functions from FSMs
+// *** CAPATALIZE ALL CHARACTERS IN FILE EXCEPT COMMENTS OR ""
+// *** NEED TO ADD STURCTURE TO RETURN TOKEN ALONG WITH LEXEMES
+// *** NEED TO KEEP TRACK OF LINE NUMBER AND COLUMN NUMBER... WHEN ERROR ACCURS PRINT LINE NUMBER AND COLUMN #
+//     ALONG WITH THE TOKEN THAT WAS MESSED UP IF ITS NOT A MISSING SEPARATOR OR COMMENT
 
 #include <cctype>
 #include <fstream>
@@ -218,8 +229,7 @@ bool checkIdentifier(const char curChar, STATES& curState)
 	}
 	else if(curChar == '$')
 	{  
-		if (curState == INSIDE_IDENTIFIER 
-		 || curState == COULD_END_IDENTIFIER)
+		if (curState == COULD_END_IDENTIFIER)
 		{
 			// a $ cannot appear at the front of an identifier
 			// only inside or at the end of an identifier
@@ -344,13 +354,13 @@ bool checkNumber(const char curChar, STATES& curState)
 			return false;
 		}
 	}
-	else if (isDigit && curState == COULD_END_REAL)
+	else if (isDigit && (curState == INSIDE_REAL || curState == COULD_END_REAL))
 	{
-		//a digit followed by a '.' followed by a digit has be found
-		curState = END_REAL;
+		// a digit followed after the '.' and possibly more digits found
+		curState = COULD_END_REAL;
 		return true;
-	}	
-	else if (isWhiteSpace(curChar) || isOpenSeparator(curChar))
+	}
+	else if (isWhiteSpace(curChar) || isOpenSeparator(curChar) || NEED TO ADD OPERATORS HERE)
 	{
 		if (curState == INSIDE_NUMBER)
 		{
@@ -395,7 +405,7 @@ bool checkOperators(const char curChar, STATES& curState)
 		case '/':
 			if (curState == INITIAL_STATE)
 			{
-				curState = POTENTIAL_OPERATOR;
+				curState = END_OPERATOR;
 				return true;
 			}
 			else
@@ -460,13 +470,13 @@ bool checkOperators(const char curChar, STATES& curState)
 			else if (curState == CARROT_OPERATOR)
 			{
 				// found the ^= operator
-				curState = POTENTIAL_OPERATOR;
+				curState = END_OPERATOR;
 				return true;
 			}
 			else if (curState == EQUAL_OPERATOR)
 			{
 				// found the == operator
-				curState = POTENTIAL_OPERATOR;
+				curState = END_OPERATOR;
 				return true;
 			}
 			else
