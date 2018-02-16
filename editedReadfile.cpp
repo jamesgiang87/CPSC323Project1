@@ -21,7 +21,7 @@ using namespace std;
 // Author: Erine Estrella
 // Date: 2/15/2018
 // Revisions:
-//		- Fixed issue with comments being capitalized
+//	- Fixed issue with comments being capitalized
 //    - Made the lexer function the function that iterates through the file
 //      instead of main
 //    - Changed up the print function
@@ -29,7 +29,7 @@ using namespace std;
 // NOTES: I had to make a new filepath for the txt file that was being read in
 //        for the program to work. I also changed the name of the array because
 //        my debugger kept complaining how the name "data" for the array was
-//        to ambiguious. 
+//        too ambiguious. 
 // ============================================================================
 
 std::ifstream testfile;
