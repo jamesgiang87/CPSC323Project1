@@ -21,7 +21,10 @@ using namespace std;
 // Author: Erine Estrella
 // Date: 2/15/2018
 // Revisions:
-//    - Fixed issue with comments being capitalized
+//    - Fixed issue with comments being capitalized 
+//		- used the unget function, Im sure there's a better way of 
+//		 going about this than the way I did, but for now I just 
+//		 wanted to see how it worked.
 //    - Made the lexer function the function that iterates through the file
 //      instead of main
 //    - Changed up the print function
