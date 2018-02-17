@@ -46,11 +46,11 @@ int fileCount = 0;
 int print = 0;
 int numOfComments = 0; //this will test program is picking up !
 
-void Lexer(const std::ifstream& source); // this function should return a list 
+void Lexer(std::ifstream& source); // this function should return a list 
 										 //  of tokens or print them inside it
 void display(); //will display all tokens 
 
-void main()
+int main()
 {
 	testfile.open("testfile.txt");
 	
@@ -81,7 +81,7 @@ void main()
 }
 
 
-void Lexer(const std::ifstream& source)
+void Lexer(std::ifstream& source)
 {
 	while (!testfile.eof())
 	{

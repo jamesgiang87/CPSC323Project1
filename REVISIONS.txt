@@ -1,0 +1,18 @@
+// !!! NOTES !!!
+// !!! CIN AUTOMATICALLY EXTRACTS ALL CHARACTERS EXCLUDING WHITESPACE BUT IVE BEEN MANAGING THIS PROBLEM BY 
+// !!!  EXTRACTING ONE CHARACTER AT A TIME SO IM NOT SURE MY ALGORITHM/MACHINE WOULD WORK
+// 
+// **** NEED TO DO ****
+// *** ADD FUNCTIONALITY TO MOVE FILE POINTER BACKWARDS BEFORE ADDING CHARACTER TO TOKEN (can only happen
+//	with whitespace, operators and separators)
+// *** ADD LINE NUMBER AND COLUMN NUMBER VARIABLES TO KEEP TRACK IN LEXER()
+// *** CAPATALIZE ALL CHARACTERS IN FILE EXCEPT COMMENTS OR ""
+// *** PLEASE CHECK FSM LOGIC!!!
+
+// $$$ RECENT CHANGES $$$
+// $ (2/17/18 AUSTIN) CONVERTED ENTIRE COMPILER TO CLASS STRUCTURE TO ENCAPSULATE FUTURE COMPILER 
+	              FEATURES (ex Syntax Analysis)
+// $ (2/17/18 AUSTIN) ADDED runCompiler.cpp which will control entire compiler. Added command line arguments
+		      as well as ask for input file if no argument given.
+// $ (2/17/18 AUSTIN) Modified main to accept command line arguments or have user input file name.
+// $ (2/17/18 AUSTIN) ADDED a FSM function which encapsulates the entire FSM for the Lexical Analyzer.
