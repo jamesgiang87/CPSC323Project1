@@ -6,6 +6,7 @@
 #include "RAT18S_Compiler.h"
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 void OutputToken(std::ofstream& outputFile, const TOKEN token);
 
@@ -79,39 +80,47 @@ void OutputToken(std::ofstream& outputFile, const TOKEN token)
 	switch(token.tokenType)
 	{
 		case IDENTIFIER:
-			outputFile << "identifier";
+			outputFile << std::left << std::setw(strlen("identifier")); 
+			outputFile <<  "identifier";
 			break;
 
 		case INT:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "int";
 			break;
 
 		case REAL:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "real";
 			break;
 
 		case OPERATOR:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "operator";
 			break;
 
 		case SEPARATOR:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "separator";
 			break;
 
 		case COMMENT:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "comment";
 			break;
 
 		case SYMBOL:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "symbol";
 			break;
 
 		default:
+			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "unknown";
 			break;
 		
 	}
-	
-	outputFile << "\t\t\t\t\t";
-	outputFile << token.lexeme << "\n";
+
+	double extraSpacing = strlen("identifier") - token.lexeme.length();	
+	outputFile << std::setw(25+extraSpacing) << " " << token.lexeme << "\n";
 }
