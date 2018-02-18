@@ -1,3 +1,12 @@
+??? QUESTIONS ???
+???Does the output of the token need to be as user entered? If they entered identifier: Int1
+	would our token output say INT1 or Int1?
+
+??? Is the " a separator or symbol?
+
+??? How should we handle encounters with ! comments or "string literals? Should we
+    identify the token ! and " but ignore its contents or label contents as identifier tokens?
+
 // !!! NOTES !!!
 // !!! CIN AUTOMATICALLY EXTRACTS ALL CHARACTERS EXCLUDING WHITESPACE BUT IVE BEEN MANAGING THIS PROBLEM BY 
 // !!!  EXTRACTING ONE CHARACTER AT A TIME SO IM NOT SURE MY ALGORITHM/MACHINE WOULD WORK

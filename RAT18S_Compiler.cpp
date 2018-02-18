@@ -4,142 +4,33 @@
 
 //*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
 // ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
-
+// BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN COMPILER (Ex Lexical Analysis, Syntax Analysis..)
 
 #include <cctype>
 #include <fstream>
 #include <iostream>		
-#include "RAT18Scompiler.h"
+#include "RAT18S_Compiler.h"
  
+// ========================= Lexical Analysis Start ============================
 
 //==============================================================================
-// Description: This function will check the given character recieved from the
-//		source file and compare it with the current FSM (Finite State
-//		Machine) and change the state if it determines it needs to back 
-//		up the current file pointer. If the current file pointer needs 
-//		to be backed up this function will back it up. If the FSM
-//		(Finite State Machine) is will throw an ERROR type.
+// Description: This function will capitalize a character if lowercase letter.
 //
-// Input: curChar - the current character taken from the source file for 
-//		    evaluation.
-//	  curState - the current state the FSM (Finite State Machine) is in.
+// Input: curChar - the char we want to upper case if possible.
 //
-//	  source - a reference to the input file stream.
-//
-// Output: true - the file pointer was backed up. 
-//	   false - the file pointer was not backed up.
+// Output: NONE
 //
 //==============================================================================
-// ***NOT SURE IF THIS ACTUALLY NEEDS TO BE BOOL
-bool RAT18Scompiler::CheckBackup(const char curChar, STATES& curState, 
-				 std::ifstream source)
-{// ***POTENTIALLY UNFINISHED
-
-	bool pushBack = false;		// determines if file pointer needs
-					//  to be pushed back
-
-	if (IsWhiteSpace(curChar) || IsSeparator(curChar) || IsOperator(curChar))
-	{
-		switch(curState)
-		{
-
-			// cases for IDENTIFIERS
-			case COULD_END_IDENTIFIER:
-			case DOLLAR_IDENTIFIER:
-				// we have just found out that it is an
-				//  identifier so label as accepted
-				curState = END_IDENTIFIER;
-				pushBack = true;
-				break;
-
-			// cases for NUMBERS
-			case INSIDE_NUMBER:
-				// we have just found out that its is not a
-				//  number anymore so we label it as accepted
-				curState = END_INT;
-				pushBack = true;
-				break;
-
-			case COULD_END_REAL:
-				// we just found out that it is a real number
-				//  so we label it as an accepting state
-				curState = END_REAL;
-				pushBack = true;
-				break;
-		
-			// cases for OPERATORS
-				// not all operators need to be here
-			case POTENTIAL_OPERATOR:
-			case EQUAL_OPERATOR:
-				
-				// we have just found a > or < and IT MUST BE A SPACE
-				if (!IsOperator(curChar))
-				{
-					curState = END_OPERATOR;
-					pushBack = true;
-				}
-				else
-				{
-					throw DetermineError(curState);
-				}
-				
-				break;
-				
-			// dont need it for separatros or comments because we
-			//  know when we find the second one it is accepted
-			default:
-				// we need to throw error
-				throw DetermineError(curState);
-		}
-
-		if (pushBack)
-		{
-			// set the file pointer back one character
-			source.unget();
-		}
-	}
-
-	return false;
-}
-
-
-
-//==============================================================================
-// Description: This function will check and change the FSM (Finite State 
-//		Machine) state if the current character from the source file is 
-//		apart of a comment else it will throw an ERROR type.
-//
-// Input: curChar - the current character taken from the source file for 
-//		    evaluation.
-//	  curState - the current state the FSM (Finite State Machine) is in.
-//
-// Output: true - if the state of the Finite State Machine is changed (updated).
-//	   false - if the state of the Finite State Machine is unchanged.
-//
-//==============================================================================
-bool RAT18Scompiler::CheckComments(const char curChar, STATES& curState)
+void RAT18S_Compiler::CapitalizeChar(char& curChar)
 {
-	if(curChar == '!' && curState == INITIAL_STATE)
-	{	
-		// found a ! character which means beginning of a comment
-		curState = INSIDE_COMMENT;
-		return true;
-	}	
-	else if (curChar == '!' && curState == INSIDE_COMMENT)
+	// if curChar is an upper case letter or a symbol dont need to 
+	//  upper case...
+	if (curChar >= 'a' && curChar <= 'z')
 	{
-		// already found an initial ! character so this must be the end 
-		//  the comment
-		curState = END_COMMENT;
-		return true;
-		
+		// did this to reduce library code needed. 32 is difference 
+		//  between uppercase ascii and lower case ascii
+		curChar = curChar - 32;
 	}
-	else if (curChar == '!')
-	{
-		// an unmatch ! has been found
-		throw DetermineError(curState);
-	}
-
-	return false;
 }
 
 
@@ -150,20 +41,21 @@ bool RAT18Scompiler::CheckComments(const char curChar, STATES& curState)
 //
 // Input: curChar - the current character taken from the source file for 
 //		    evaluation.
-//	  curState - the current state the FSM (Finite State Machine) is in.
 //
 // Output: true - if the state of the Finite State Machine is changed (updated).
 //	   false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool RAT18Scompiler::CheckIdentifier(const char curChar, STATES& curState)
+bool RAT18S_Compiler::CheckIdentifier(const char curChar)
 {
+	STATE curState = GetCurrentState();
+	
 	if (std::isalpha(curChar) && (curState == INITIAL_STATE 
-	  || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
+	 || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
 	{
 		// identifiers must lead with a letter or end with a
 		// letter with the exception of ending with a $
-		curState = COULD_END_IDENTIFIER;
+		SetCurrentState(COULD_END_IDENTIFIER);
 		return true;
 		
 	}
@@ -171,26 +63,22 @@ bool RAT18Scompiler::CheckIdentifier(const char curChar, STATES& curState)
 	{  
 		// a $ cannot appear at the front of an identifier
 		// only inside or at the end of an identifier
-		curState = DOLLAR_IDENTIFIER;
+		SetCurrentState(DOLLAR_IDENTIFIER);
 		return true;
 	}
 	else if(std::isdigit(curChar) && (curState == INSIDE_IDENTIFIER 
-				 || curState == COULD_END_IDENTIFIER))
+				    || curState == COULD_END_IDENTIFIER))
 	{
 		// an identifier cannot end in a digit so it must still
 		// be considered inside and identifier
-		curState = INSIDE_IDENTIFIER;
+		SetCurrentState(INSIDE_IDENTIFIER);
 		return true;
 
-		// we do not throw an error because if a digit is found
-		// if may be apart of an integer or real number
-	}
-	else
-	{
-		//found an $ or letter in an illegal state
-		throw DetermineError(curState);
 	}
 	
+	// we do not throw an error because if a digit is found
+	// if may be apart of an integer or real number
+
 	return false;
 }
 
@@ -201,13 +89,12 @@ bool RAT18Scompiler::CheckIdentifier(const char curChar, STATES& curState)
 //		(Finite State Machine) will be updated accordingly.
 //
 // Input: curToken - the current token we want to determine is a keyword or not.
-//	  curState - the current state of the FSM (Finite State Machine).
 //
 // Output: true - if the state of the FSM (Finite State Machine) was changed.
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18Scompiler::CheckKeyword(const std::string curToken, STATES& curState)
+bool RAT18S_Compiler::CheckKeyword(const std::string curToken)
 {
 	// highest index of the list we are searching
 	int maxIndex = KEYWORDS_AMOUNT;	
@@ -222,7 +109,8 @@ bool RAT18Scompiler::CheckKeyword(const std::string curToken, STATES& curState)
 	{
 		if (curToken == KEYWORDS[curIndex])
 		{
-			curState = END_KEYWORD;
+			SetCurrentState(END_KEYWORD);
+			SetToken(KEYWORD);
 			return true;
 		}
 		else if (curToken < KEYWORDS[curIndex])
@@ -248,44 +136,42 @@ bool RAT18Scompiler::CheckKeyword(const std::string curToken, STATES& curState)
 //
 // Input: curChar - the current character taken from the source file for 
 //		    evaluation.
-//	  curState - the current state of the FSM (Finite State Machine)
 //
 // Output: true - if the state of the FSM (Finite State Machine) was changed.
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18Scompiler::CheckNumber(const char curChar, STATES& curState)
+bool RAT18S_Compiler::CheckNumber(const char curChar)
 {
 	bool isDigit = std::isdigit(curChar);
+	STATE curState = GetCurrentState();
 
 	if (isDigit && curState == INITIAL_STATE)
 	{
 		// found a number so we are inside a number
-		curState = INSIDE_NUMBER;
+		SetCurrentState(INSIDE_NUMBER);
 		return true;
 	}
 	else if (isDigit && curState == INSIDE_NUMBER)
 	{
-		// if isdigit and its inside a number do NOTHING
-		//state really hasnt changed
-		return false;
+		return true;
 	}
 	else if (curChar == '.')
 	{
 		if (curState == INSIDE_NUMBER)
 		{
-			curState = INSIDE_REAL;
+			SetCurrentState(INSIDE_REAL);
 			return true;	
 		}
 		else
 		{
-			throw DetermineError(curState);
+			throw DetermineError();
 		}
 	}
 	else if (isDigit && (curState == INSIDE_REAL || curState == COULD_END_REAL))
 	{
 		// a digit followed after the '.' and possibly more digits found
-		curState = COULD_END_REAL;
+		SetCurrentState(COULD_END_REAL);
 		return true;
 	}
 	
@@ -300,14 +186,15 @@ bool RAT18Scompiler::CheckNumber(const char curChar, STATES& curState)
 //
 // Input: curChar - the current character taken from the source file for 
 //		    evaluation.
-//	  curState - the current state of the FSM (Finite State Machine)
 //
 // Output: true - if the state of the FSM (Finite State Machine) was changed.
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18Scompiler::CheckOperators(const char curChar, STATES& curState)
+bool RAT18S_Compiler::CheckOperators(const char curChar)
 {
+	STATE curState = GetCurrentState();
+
 	switch(curChar)
 	{
 		// symbols could be added to these operators or we are looking
@@ -318,12 +205,13 @@ bool RAT18Scompiler::CheckOperators(const char curChar, STATES& curState)
 		case '/':
 			if (curState == INITIAL_STATE)
 			{
-				curState = END_OPERATOR;
+				SetCurrentState(END_OPERATOR);
+				SetToken(OPERATOR);
 				return true;
 			}
 			else
 			{	// invalid symbol found in wrong state
-				throw DetermineError(curState);
+				throw DetermineError();
 			}
 
 			break;
@@ -334,13 +222,13 @@ bool RAT18Scompiler::CheckOperators(const char curChar, STATES& curState)
 				// found the first part of ^= operator
 				// need special enum because we cant have ^>
 				// or ^space as an operator
-				curState = CARROT_OPERATOR;
+				SetCurrentState(CARROT_OPERATOR);
 				return true;
 			}
 			else
 			{
 				// invalid symbol found in wrong state
-				throw DetermineError(curState);
+				throw DetermineError();
 			}
 
 			break;
@@ -350,19 +238,19 @@ bool RAT18Scompiler::CheckOperators(const char curChar, STATES& curState)
 			if (curState == INITIAL_STATE)
 			{
 				// found either <, or > operator
-				curState = POTENTIAL_OPERATOR;
+				SetCurrentState(POTENTIAL_OPERATOR);
 				return true;
 			}
-			else if (curState == EQUAL_OPERATOR)
+			else if ( curState == EQUAL_OPERATOR)
 			{	
 				// found portion of =>, or =< operator
-				curState = POTENTIAL_OPERATOR;
+				SetCurrentState(POTENTIAL_OPERATOR);
 				return true;
 			}
 			else
 			{
 				// invalid symbol found in wrong state
-				throw DetermineError(curState);
+				throw DetermineError();
 			}
 
 			break;
@@ -371,31 +259,33 @@ bool RAT18Scompiler::CheckOperators(const char curChar, STATES& curState)
 			if (curState == INITIAL_STATE)
 			{
 				// found first portion of ==, =>, or =<
-				curState = EQUAL_OPERATOR;
+				SetCurrentState(EQUAL_OPERATOR);
 				return true;
 			}
 			else if (curState == CARROT_OPERATOR)
 			{
 				// found the ^= operator
-				curState = END_OPERATOR;
+				SetCurrentState(END_OPERATOR);
+				SetToken(OPERATOR);
 				return true;
 			}
 			else if (curState == EQUAL_OPERATOR)
 			{
 				// found the == operator
-				curState = END_OPERATOR;
+				SetCurrentState(END_OPERATOR);
+				SetToken(OPERATOR);
 				return true;
 			}
 			else
 			{
 				// invalid symbol found in wrong state
-				throw DetermineError(curState);
+				throw DetermineError();
 			}
 
 			break;
 
 		default:
-			throw DetermineError(curState);
+			break;
 	}
 	
 	return false;
@@ -409,26 +299,27 @@ bool RAT18Scompiler::CheckOperators(const char curChar, STATES& curState)
 //
 // Input: curChar - the current character taken from the source file for 
 //		    evaluation.
-//	  curState - the current state the FSM (Finite State Machine) is in.
 //
 // Output: true - if the state of the Finite State Machine is changed (updated).
 //	   false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool RAT18Scompiler::CheckSeparators(const char curChar, STATES& curState)
+bool RAT18S_Compiler::CheckSeparators(const char curChar)
 {
+	STATE curState = GetCurrentState();
+
 	if (IsSeparator(curChar) && curState == INITIAL_STATE)
 	{
 		// found the first part of a separator character
 		if (curChar == '%')
 		{
 			//special case as %% is a separator not {% or (% etc.
-			curState = PERCENT_SEPARATOR;
+			SetCurrentState(PERCENT_SEPARATOR);
 			return true;
 		}
 		else
 		{
-			curState = INSIDE_SEPARATOR;
+			SetCurrentState(INSIDE_SEPARATOR);
 			return true;
 		}
 	}
@@ -436,13 +327,14 @@ bool RAT18Scompiler::CheckSeparators(const char curChar, STATES& curState)
 		 (curChar == '%'&& curState == PERCENT_SEPARATOR))
 	{
 		// found the closing part of a separator character
-		curState = END_SEPARATOR;
+		SetCurrentState(END_SEPARATOR);
+		SetToken(SEPARATOR);
 		return true;
 	}
 	else
 	{
 		// separator was found in an invalid state
-		throw DetermineError(curState);
+		throw DetermineError();
 	}
 
 	return false;
@@ -454,16 +346,15 @@ bool RAT18Scompiler::CheckSeparators(const char curChar, STATES& curState)
 //		of the FSM (Finite State Machine). It will then return the
 //		error as an enum ERROR type.
 //
-// Input: curState - the current state that the FSM (Finite State Machine) was
-//		     at before the error occured.
+// Input: NONE
 //
 // Output: ERROR - returns an enum error value to the corresponding error that
 //		   occured.
 //
 //==============================================================================
-ERROR RAT18Scompiler::DetermineError(const STATES curState)
+ERROR RAT18S_Compiler::DetermineError()
 {
-	switch(curState)
+	switch(GetCurrentState())
 	{
 		// ERROR CASES FOR IDENTIFIERS
 		case INSIDE_IDENTIFIER:
@@ -494,73 +385,248 @@ ERROR RAT18Scompiler::DetermineError(const STATES curState)
 
 
 //==============================================================================
+// Description: This function will check the given character recieved from the
+//		source file and compare it with the current FSM (Finite State
+//		Machine) and change the state if it determines the end of a 
+//		token was found. If the FSM (Finite State Machine) is will throw 
+//		an ERROR type.
+//
+// Input: curChar - the current character taken from the source file for 
+//		    evaluation.
+//
+// Output: true - End of a token has been found. 
+//	   false - End of a token has not been found.
+//
+//==============================================================================
+bool RAT18S_Compiler::EndOfToken(const char curChar)
+{
+	if (IsWhiteSpace(curChar) || IsSeparator(curChar) || IsOperator(curChar)
+	    || IsComment(curChar) || IsStringLiteral(curChar))
+	{
+		switch(GetCurrentState())
+		{
+			// cases for IDENTIFIERS
+			case COULD_END_IDENTIFIER:
+			case DOLLAR_IDENTIFIER:
+				// we have just found out that it is an
+				//  identifier so label as accepted
+				SetCurrentState(END_IDENTIFIER);
+				SetToken(IDENTIFIER);
+				return true;
+				break;
+
+			// cases for NUMBERS
+			case INSIDE_NUMBER:
+				// we have just found out that its is not a
+				//  number anymore so we label it as accepted
+				SetCurrentState(END_INT);
+				SetToken(INT);
+				return true;
+				break;
+
+			case COULD_END_REAL:
+				// we just found out that it is a real number
+				//  so we label it as an accepting state
+				SetCurrentState(END_REAL);
+				SetToken(REAL);
+				return true;
+				break;
+		
+			// cases for OPERATORS
+				// not all operators need to be here
+			case POTENTIAL_OPERATOR:
+			case EQUAL_OPERATOR:
+				
+				// we have just found a > or < and IT MUST BE A SPACE
+				if (!IsOperator(curChar))
+				{
+					SetCurrentState(END_OPERATOR);
+					SetToken(OPERATOR);
+					return true;
+				}
+				else
+				{
+					throw DetermineError();
+				}
+				
+				break;
+		
+			// cases for SEPARATORS
+			case INITIAL_STATE:
+				if (IsWhiteSpace(curChar) || CheckSeparators(curChar))
+				{
+					return false;
+				}
+		
+			// cases for COMMENTS
+			case INSIDE_COMMENT:	
+			case END_COMMENT:
+				SetToken(COMMENT);
+				return true;
+				break;
+			
+			// cases for STRING LITERALS
+			case INSIDE_STRING_LITERAL:
+			case END_STRING_LITERAL:
+				SetToken(TYPE_ERROR);
+				return true;
+				break;
+
+			// dont need it for separatros or comments because we
+			//  know when we find the second one it is accepted
+			default:
+				break;
+		}
+	}
+
+	return false;
+}
+
+
+//==============================================================================
 // Description: This function will encapulate all FSM (Finite State Machine)
 //		functionality. This function will return true if the state of
 //		the FSM (Finite State Machine) was updated/changed or false
 //		if the state was unchanged.
 // 
 // Input: curChar - the current char recieved from the input file
-//
-//	  curState - the current state of the FSM (Finite State Machine).
-//
-//	  curToken - the current literal token we have "found" so far while 
-//		     evaluating the input file
 //	  
-// Output: true - the state of the FSM (Finite State Machine) was changed.
-//
-//	   false - the state of the FSM (Finite State Machine) was unchanged.
+// Output: NONE
 //
 //==============================================================================
-
-bool RAT18SCompiler::FSM(const char curChar, STATES& curState, 
-			 const std::string curToken)
+void RAT18S_Compiler::FSM(const char curChar)
 {
-
+	STATE curState = GetCurrentState();
+	if (IsWhiteSpace(curChar) && curState == INITIAL_STATE)
+	{}
 	// run every machines apart of the FSM
 	// SPECIAL CASE FOR IDENTIFIERS
-	if (CheckIdentifier(curChar, curState))
+	else if (CheckIdentifier(curChar))
 	{
 		if (curState == END_IDENTIFIER)
 		{
-			CheckKeyword(curToken, curState);
-			// state of FSM has been changed
-			return true;
+			CheckKeyword(GetLexeme());
 		}
 	}
-	else if (CheckComments(curChar, curState)   ||
-	    	 CheckNumber(curChar, curState)	    ||
-	    	 CheckOperators(curChar, curState)  ||
-	    	 CheckSeparators(curChar, curState))
-	{
-		// state of FSM has beend changed
-		return true;
-	}
-	
-	// FSM state unchanged
-	return false;
+	else if (CheckNumber(curChar) || CheckOperators(curChar) || 
+		 CheckSeparators(curChar))
+	{}
 }
 
 
 //==============================================================================
 //==============================================================================
-TOKEN RAT18Scompiler::Lexer(std::ifstream& source)
+TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 {
-	//getchar();
-	// if input char terminates a token AND it is an accepting state then
-	//	Isolate the token/lexem
-	//	Decrement the CP if necessary
-	// else lookup FSM(current state, input char);
-	//until (token found) or (no more input)
+    
+    ClearLexeme();            // make sure there are no old lexemes
+    bool tokenFound = false;    // if token is found set true
+    char fileChar;            // stores the chars extracted from file
+    
+    // look for a token until token is found or end of source file is found
+    do
+    {
+        
+        
+        // retrieve a character from the file white fileChar is not whitespace
+        source.get(fileChar);
+            
+        // Have the FSM find initial comment/string character and then
+        //  this will catch the last comment/string character
+        if (GetCurrentState() == INSIDE_COMMENT ||
+            GetCurrentState() == INSIDE_STRING_LITERAL)
+        {
+            do
+            {
+                source.get(fileChar);
+                SetColmNum(++colmNum);
+                
+            }while ((!IsComment(fileChar)        &&
+                     !IsStringLiteral(fileChar)) &&
+                     !source.eof());
+            
+        }
+        else if (fileChar == '\n'){    SetLineNum(++lineNum);     }
+        else {SetColmNum(++colmNum);}
+        
+        // append the fileChar to the token
+        if (!IsWhiteSpace(fileChar))
+        {
+            AppendToLexeme(fileChar);
+        }
+        
+        // capitalize the character from the file because RAT18S is
+        //  insensative to upper case or lower case names
+        CapitalizeChar(fileChar);
+        
+        if (IsComment(fileChar))
+        {
+            if (GetCurrentState() == INITIAL_STATE)
+            {
+                SetCurrentState(INSIDE_COMMENT);
+            }
+            else
+            {
+                SetCurrentState(END_COMMENT);
+            }
+        }
+        else if (IsStringLiteral(fileChar))
+        {
+            if (GetCurrentState() == INITIAL_STATE)
+            {
+                SetCurrentState(INSIDE_STRING_LITERAL);
+            }
+            else
+            {
+                SetCurrentState(END_STRING_LITERAL);
+            }
+        }
+        
+        try
+        {
+            // if operator or separator is encounters we need
+            //  to back up the file pointer. However we dont
+            //  need to move file pointer if it is whitespace
+            if (EndOfToken(fileChar))
+            {
+                if (!IsComment(fileChar) && !IsStringLiteral(fileChar))
+                {
+                    if (!IsWhiteSpace(fileChar))
+                    {
+                        // push the file pointer back
+                        source.unget();
+                        SetColmNum(--colmNum);    // decrease column number
+                        RemoveLastCharLexeme();    
+                    }
+                }
+            }
+            else
+            {
+                // run all the FSM on the currentCharacter
+                FSM(fileChar);
+            }
+            
+            // check if the current state is in an acceptingState
+            (IsInAcceptingState()) ? tokenFound = true :
+            tokenFound = false;
+            
+        }
+        catch(const ERROR error)
+        {
+            // print the error to the user
+            PrintError(error);
+        }
+        
+    } while (!tokenFound && !source.eof());
+    
+    return token;
 }
-
 
 //==============================================================================
 // Description: This function will determine if the current state of the FSM
-//		(Finite State Machine) is in an accepting state or not. If the
-//		FSM (Finite State Machine) is in an accepting state it will
-//		return true or false. 
+//		(Finite State Machine) is in an accepting state or not. 
 // 
-// Input: curState - the current state of the FSM (Finite State Machine).
+// Input: NONE
 //
 // Output: true - the current state of the FSM (Finite State Machine) is in an
 //		  accepting state.
@@ -568,9 +634,9 @@ TOKEN RAT18Scompiler::Lexer(std::ifstream& source)
 //		   in an accepting state.
 //
 //==============================================================================
-bool RAT18Scompiler::IsAcceptingState(const STATES curState)
+bool RAT18S_Compiler::IsInAcceptingState()
 {
-	switch(curState)
+	switch(fsmState)
 	{
 		case END_IDENTIFIER:
 		case END_INT:
@@ -578,12 +644,37 @@ bool RAT18Scompiler::IsAcceptingState(const STATES curState)
 		case END_KEYWORD:
 		case END_OPERATOR:
 		case END_SEPARATOR:
+		case END_COMMENT:
+		case END_STRING_LITERAL:
+			SetCurrentState(INITIAL_STATE);	// reset the FSM
 			return true;	// an accepting state
+
+		// special cases where the FSM is not reset
+		case INSIDE_COMMENT:
+		case INSIDE_STRING_LITERAL:
+			return true;
 		default:
 			return false;	// not an accepting state
 	}	
 
 	return false;
+}
+
+
+//==============================================================================
+// Description: This function will determine if the char passed by argument is
+//		a legal comment character in the RAT18S language.
+// 
+// Input: curChar - the current char we are testing to determine if its a 
+//		    legal comment character.
+//
+// Output: true - curChar is a legal comment character for RAT18S.
+//	   false - curChar is an illegal comment char for RAT18S.
+//
+//==============================================================================
+bool RAT18S_Compiler::IsComment(const char curChar)
+{
+	return curChar == '!';
 }
 
 
@@ -598,7 +689,7 @@ bool RAT18Scompiler::IsAcceptingState(const STATES curState)
 //	   false - curChar is an illegal beginning operator char for RAT18S.
 //
 //==============================================================================
-bool RAT18Scompiler::IsOperator(const char curChar)
+bool RAT18S_Compiler::IsOperator(const char curChar)
 {
 	for (int i = 0; i < OPERATOR_AMOUNT; i++)
 	{
@@ -619,7 +710,7 @@ bool RAT18Scompiler::IsOperator(const char curChar)
 //	   false - curChar is an illegal separator character for RAT18S.
 //
 //==============================================================================
-bool RAT18Scompiler::IsSeparator(const char curChar)
+bool RAT18S_Compiler::IsSeparator(const char curChar)
 {
 	for (int i = 0; i < SEPARATOR_AMOUNT; i++)
 	{
@@ -640,10 +731,10 @@ bool RAT18Scompiler::IsSeparator(const char curChar)
 //	   false - curChar is an illegal separator character for RAT18S.
 //
 //==============================================================================
-bool RAT18Scompiler::IsStringLiteral(const char curChar)
+bool RAT18S_Compiler::IsStringLiteral(const char curChar)
 {
 
-	if (curChar == "\"") 	return true;
+	if (curChar == '\"') 	return true;
 	return false;
 }
 
@@ -660,7 +751,7 @@ bool RAT18Scompiler::IsStringLiteral(const char curChar)
 //	   false - curChar is an illegal whitespace character for RAT18S.
 //
 //==============================================================================
-bool RAT18Scompiler::IsWhiteSpace(const char curChar)
+bool RAT18S_Compiler::IsWhiteSpace(const char curChar)
 {
 	for (int i = 0; i < WHITESPACE_AMOUNT; i++)
 	{
@@ -677,19 +768,15 @@ bool RAT18Scompiler::IsWhiteSpace(const char curChar)
 //		possible token we believe is in error as well as what line 
 //		number and column number this error can be found.
 //
-// Input: lineNum   - the line the error was found on
-//	  colmNum   - the column the error was found on
-//	  token     - the token we believe is in error
-//	  errorType - the type of error that was caused
+// Input:	errorType - the type of error that was caused
 //
 // Output: NONE
 //
 //==============================================================================
-void RAT18Scompiler::PrintError(const int lineNum, const int colmNum, 
-		const std::string token, const ERROR errorType)
+void RAT18S_Compiler::PrintError(const ERROR errorType)
 {
 
-	std::cout << lineNum << ":" << colmNum << " error: ";
+	std::cout << GetLineNum() << ":" << GetColmNum() << " RAT18S error: ";
 
 	switch(errorType)
 	{
@@ -722,3 +809,4 @@ void RAT18Scompiler::PrintError(const int lineNum, const int colmNum,
 
 
 
+// ========================== Lexical Analysis End =============================

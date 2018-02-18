@@ -2,8 +2,8 @@
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
 
-#ifndef RAT18Scompiler_HEADER
-#define RAT18Scompiler_HEADER
+#ifndef RAT18S_Compiler_HEADER
+#define RAT18S_Compiler_HEADER
 
 #include <string>
 
@@ -31,46 +31,53 @@ const char WHITESPACES[WHITESPACE_AMOUNT] = {' ', '\t', '\n'};
 const char OPERATORS[OPERATOR_AMOUNT] = {'=', '+', '-', '*', '/', '<', '>', '^'};
 
 // stores every other state of our FSM (Finite State Machine)
-enum STATES
+enum STATE
 {
 	INITIAL_STATE,		// first state of the FSM
 
-	//STATES FOR IDENTIFIERS
+	//STATE FOR IDENTIFIERS
 	INSIDE_IDENTIFIER,	// only when it sees a digit after letter
 	COULD_END_IDENTIFIER,	// only last letter, or letter in the middle
 	DOLLAR_IDENTIFIER,	// only last character can be $ if its found
 	END_IDENTIFIER,		// AN ACCEPTING STATE IDENTIFIERS
 	
-	//STATES FOR NUMBERS
+	//STATE FOR NUMBERS
 	INSIDE_NUMBER,		// a digit is found and current state is initial
 	END_INT,		// AN ACCEPTING STATE FOR INTEGERS
 	INSIDE_REAL,		// when a '.' is found after a digit is
 	COULD_END_REAL,		// when a digit is found after a '.'
 	END_REAL,		// AN ACCEPTING STATE FOR REALS
 
-	//STATES FOR KEYWORDS
+	//STATE FOR KEYWORDS
 	END_KEYWORD,		// AN ACCEPTING STATE FOR KEYWORDS
 
-	//STATES FOR OPERATORS
+	//STATE FOR OPERATORS
 	CARROT_OPERATOR,	// found an initial ^
 	EQUAL_OPERATOR,		// found =
 	POTENTIAL_OPERATOR,	// found +, -, /, *, >, <
 	END_OPERATOR,		// AN ACCEPTING STATE FOR OPERATORS
 
-	//STATES FOR SEPARATORS
+	//STATE FOR SEPARATORS
 	INSIDE_SEPARATOR,	// found {, (
 	PERCENT_SEPARATOR,	// found %
 	END_SEPARATOR,		// AN ACCEPTING STATE FOR SEPARATORS
 
-	//STATES FOR COMMENTS
+	//STATE FOR COMMENTS
 	INSIDE_COMMENT,		// found initial !
-	END_COMMENT		// AN ACCEPTING STATE FOR COMMENTS
+	END_COMMENT,		// found last !
+
+	//STATE FOR STRING LITERALS
+	INSIDE_STRING_LITERAL,	// foudn initial "
+	END_STRING_LITERAL	// found last "
 };
 
 
 // stores every error flag that may occur in our FSM (Finite State Machine)
 enum ERROR
 {
+	//ERROR FOR ERRORS HAHA
+	UNKNOWN_ERROR,
+
 	//ERRORS FOR IDENTIFIERS
 	INVALID_IDENTIFIER,	// Ex a8, a$2	
 
@@ -82,24 +89,22 @@ enum ERROR
 	INVALID_OPERATOR,	// Ex **, ++, --
 
 	//ERRORS FOR SYMBOLS
-	INVALID_SYMBOL,		//Ex @, #, &
-
-	//ERRORS FOR ERRORS HAHA
-	UNKNOWN_ERROR
+	INVALID_SYMBOL		//Ex @, #, &
 };
 
 
 // stores the different types a token can be
 enum TOKEN_TYPE
 {
+	TYPE_ERROR,
 	IDENTIFIER,
+	KEYWORD,
 	INT,
 	REAL,
 	OPERATOR,
 	SEPARATOR,
 	COMMENT,
 	SYMBOL
-	//, TYPE_ERROR	// ***NOT SURE IF NEEDED
 };
 
 
@@ -110,35 +115,53 @@ struct TOKEN
 };
 
 
-class RAT18Scompiler
+class RAT18S_Compiler
 {
 
 public:
-	RAT18Scompiler() {};
+	RAT18S_Compiler():lineNum(0),colmNum(0),fsmState(INITIAL_STATE) {};
 	TOKEN Lexer(std::ifstream& source); // this function should return a list 
 				           //  of tokens or print them inside it
 
 // LEXER FSMs AND HELPER FUNCTIONS
 private:
 // LEXER FSMs
-	bool CheckBackup(const char curChar, STATES& curState, std::ifstream source);
-	bool CheckComments(const char curChar, STATES& curState);
-	bool CheckIdentifier(const char curChar, STATES& curState);
-	bool CheckKeyword(const std::string curToken, STATES& curState);
-	bool CheckNumber(const char curChar, STATES& curState);
-	bool CheckOperators(const char curChar, STATES& curState);
-	bool CheckSeparators(const char curChar, STATES& curState);
-	bool FSM(const char curChar, STATES& curState, const std::string curToken);
+	bool CheckIdentifier(const char curChar);
+	bool CheckKeyword(const std::string curToken);
+	bool CheckNumber(const char curChar);
+	bool CheckOperators(const char curChar);
+	bool CheckSeparators(const char curChar);
+	bool EndOfToken(const char curChar);
+	void FSM(const char curChar);
 
 // LEXER HELPER FUNCTIONS
-	ERROR DetermineError(const STATES curState);
-	bool IsAcceptingState(const STATES curState);
+	void AppendToLexeme(const char curChar) {token.lexeme += curChar;}
+	void CapitalizeChar(char& curChar);
+	void ClearLexeme() {token.lexeme.clear();}
+	ERROR DetermineError();
+	long long int GetColmNum() {return colmNum;}
+	STATE GetCurrentState() {return fsmState;}
+	std::string GetLexeme(){return token.lexeme;}
+	long long int GetLineNum() {return lineNum;}
+	TOKEN_TYPE GetToken() {return token.tokenType;}
+	void SetColmNum(const long long int newColmNum) {colmNum = newColmNum;}
+	void SetCurrentState(const STATE state) {fsmState = state;}
+	void SetLineNum(const long long int newLineNum) {lineNum = newLineNum;}
+	void SetToken(const TOKEN_TYPE token_type) {token.tokenType = token_type;}
+	void RemoveLastCharLexeme() {token.lexeme.pop_back();}
+	bool IsInAcceptingState();
+	bool IsComment(const char curChar);
 	bool IsOperator(const char curChar);
 	bool IsSeparator(const char curChar);
 	bool IsStringLiteral(const char curChar);
 	bool IsWhiteSpace(const char curChar);
-	void PrintError(const int lineNum, const int colmNum, 
-			const std::string token, const ERROR errorType);
+	void PrintError(const ERROR errorType);
+
+// LEXER PRIVATE DATA MEMBERS
+	long long int lineNum;	// stores the line number for the inputfile
+	long long int colmNum;	// stores the column number for the inputfile
+	TOKEN token;		// stores the current token
+	STATE fsmState;		// stores the current state of the FSM
 };
 
 #endif	// END OF RAT18Scompiler_HEADER
