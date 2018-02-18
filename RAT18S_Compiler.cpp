@@ -88,14 +88,17 @@ bool RAT18S_Compiler::CheckIdentifier(const char curChar)
 //		not. If the token is a keyword the current State of the FSM
 //		(Finite State Machine) will be updated accordingly.
 //
-// Input: curToken - the current token we want to determine is a keyword or not.
+// Input: NONE
 //
 // Output: true - if the state of the FSM (Finite State Machine) was changed.
 //	   false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18S_Compiler::CheckKeyword(const std::string curToken)
+bool RAT18S_Compiler::CheckKeyword()
 {
+	// stores the current lexeme
+	std::string lexeme = GetLexeme();
+
 	// highest index of the list we are searching
 	int maxIndex = KEYWORDS_AMOUNT;	
 	
@@ -107,20 +110,20 @@ bool RAT18S_Compiler::CheckKeyword(const std::string curToken)
 	
 	do
 	{
-		if (curToken == KEYWORDS[curIndex])
+		if (lexeme == KEYWORDS[curIndex])
 		{
 			SetCurrentState(END_KEYWORD);
 			SetToken(KEYWORD);
 			return true;
 		}
-		else if (curToken < KEYWORDS[curIndex])
+		else if (lexeme < KEYWORDS[curIndex])
 		{
 			maxIndex = curIndex - 1;
 			curIndex = minIndex + (maxIndex - minIndex)/2; 
 		}
 		else //curToken > KEYWORDS[curIndex]
 		{
-			maxIndex = curIndex - 1;
+			minIndex = curIndex + 1;
 			curIndex = minIndex + (maxIndex - minIndex)/2;
 		}
 	}while(minIndex <= maxIndex);
@@ -497,15 +500,16 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 void RAT18S_Compiler::FSM(const char curChar)
 {
 	STATE curState = GetCurrentState();
+
 	if (IsWhiteSpace(curChar) && curState == INITIAL_STATE)
 	{}
 	// run every machines apart of the FSM
 	// SPECIAL CASE FOR IDENTIFIERS
 	else if (CheckIdentifier(curChar))
 	{
-		if (curState == END_IDENTIFIER)
+		if (curState == COULD_END_IDENTIFIER)
 		{
-			CheckKeyword(GetLexeme());
+			CheckKeyword();
 		}
 	}
 	else if (CheckNumber(curChar) || CheckOperators(curChar) || 
@@ -551,13 +555,13 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
         
         // append the fileChar to the token
         if (!IsWhiteSpace(fileChar))
-        {
-            AppendToLexeme(fileChar);
+      	{
+	   	// capitalize the character from the file because RAT18S is
+        	//  insensative to upper case or lower case names
+        	CapitalizeChar(fileChar);
+		AppendToLexeme(fileChar);
         }
         
-        // capitalize the character from the file because RAT18S is
-        //  insensative to upper case or lower case names
-        CapitalizeChar(fileChar);
         
         if (IsComment(fileChar))
         {
@@ -608,7 +612,7 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             
             // check if the current state is in an acceptingState
             (IsInAcceptingState()) ? tokenFound = true :
-            tokenFound = false;
+            			     tokenFound = false;
             
         }
         catch(const ERROR error)

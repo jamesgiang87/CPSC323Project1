@@ -1,11 +1,12 @@
 ??? QUESTIONS ???
 ???Does the output of the token need to be as user entered? If they entered identifier: Int1
 	would our token output say INT1 or Int1?
-
-??? Is the " a separator or symbol?
-
+	- WELL I AM MAKING EVERYTHING CAPITALIZED NOT SURE IF IT SHOULD BE THIS WAY
+??? Is the " a separator or symbol? LINE 473 in RAT18S_Compiler.cpp
+	- I PUT IT AS AN ERROR UNKNOWN
 ??? How should we handle encounters with ! comments or "string literals? Should we
     identify the token ! and " but ignore its contents or label contents as identifier tokens?
+	- YES THAT IS HOW WE ARE DOING IT
 
 // !!! NOTES !!!
 // !!! CIN AUTOMATICALLY EXTRACTS ALL CHARACTERS EXCLUDING WHITESPACE BUT IVE BEEN MANAGING THIS PROBLEM BY 

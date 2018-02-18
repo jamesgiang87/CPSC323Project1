@@ -84,6 +84,10 @@ void OutputToken(std::ofstream& outputFile, const TOKEN token)
 			outputFile <<  "identifier";
 			break;
 
+		case KEYWORD:
+			outputFile << std::left << std::setw(strlen("identifier"));
+			outputFile << "keyword";
+			break;
 		case INT:
 			outputFile << std::left << std::setw(strlen("identifier")); 
 			outputFile << "int";

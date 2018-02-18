@@ -127,7 +127,7 @@ public:
 private:
 // LEXER FSMs
 	bool CheckIdentifier(const char curChar);
-	bool CheckKeyword(const std::string curToken);
+	bool CheckKeyword();
 	bool CheckNumber(const char curChar);
 	bool CheckOperators(const char curChar);
 	bool CheckSeparators(const char curChar);
