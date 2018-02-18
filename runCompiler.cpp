@@ -59,15 +59,21 @@ int main(int argc, char* argv[])
 	while(!inputFile.eof())
 	{
 		token = compiler.Lexer(inputFile);
-		std::cout << "token found was " << token.lexeme << "\n";
-		OutputToken(outputFile, token);
+
+		if (!token.lexeme.empty())
+		{
+			OutputToken(outputFile, token);
+			std::cout << "token found was " << token.lexeme << "\n";
+		}
+
+		// reset the token type and clear lexeme
+		token.tokenType = TYPE_ERROR;
+		token.lexeme.clear();
 	}
 
 	// close the output file
 	outputFile.close();
 
-	std::cout << " file was able to be opened" << std::endl;
-	
 	// close the input file
 	inputFile.close();
 

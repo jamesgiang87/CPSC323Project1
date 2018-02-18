@@ -59,7 +59,8 @@ bool RAT18S_Compiler::CheckIdentifier(const char curChar)
 		return true;
 		
 	}
-	else if(curChar == '$' && curState == COULD_END_IDENTIFIER)
+	else if(curChar == '$' && (curState == INSIDE_IDENTIFIER || 
+				   curState == COULD_END_IDENTIFIER))
 	{  
 		// a $ cannot appear at the front of an identifier
 		// only inside or at the end of an identifier
@@ -456,7 +457,8 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 		
 			// cases for SEPARATORS
 			case INITIAL_STATE:
-				if (IsWhiteSpace(curChar) || CheckSeparators(curChar))
+				if (IsOperator(curChar) || IsWhiteSpace(curChar) || 
+				    CheckSeparators(curChar))
 				{
 					return false;
 				}
@@ -507,6 +509,9 @@ void RAT18S_Compiler::FSM(const char curChar)
 	// SPECIAL CASE FOR IDENTIFIERS
 	else if (CheckIdentifier(curChar))
 	{
+		// check if the state has been updated
+		curState = GetCurrentState();
+
 		if (curState == COULD_END_IDENTIFIER)
 		{
 			CheckKeyword();
@@ -530,8 +535,6 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
     // look for a token until token is found or end of source file is found
     do
     {
-        
-        
         // retrieve a character from the file white fileChar is not whitespace
         source.get(fileChar);
             
@@ -593,6 +596,8 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             //  need to move file pointer if it is whitespace
             if (EndOfToken(fileChar))
             {
+		// dont push file pointer back for comments, string literals
+		//  or whitespace
                 if (!IsComment(fileChar) && !IsStringLiteral(fileChar))
                 {
                     if (!IsWhiteSpace(fileChar))
@@ -617,9 +622,33 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
         }
         catch(const ERROR error)
         {
-            // print the error to the user
-            PrintError(error);
-        }
+            	// print the error to the user
+      		PrintError(error);
+		
+	   	// while we have found an error we need to find the next token
+		while(!IsWhiteSpace(fileChar) && !IsOperator(fileChar) && 
+			!IsSeparator(fileChar) && !IsComment(fileChar) && 
+			!IsStringLiteral(fileChar) && !source.eof())
+		{
+		 	source.get(fileChar);
+			
+			// if we encounter new lines, whitespace then increment
+			//  file counters accordingly
+			IncrementFileCounters(fileChar);
+
+		}
+	
+	  // we found our next token so put it back and reset the FSM state
+	  if (!IsWhiteSpace(fileChar))
+	  {
+		// if not whitespace then we need to store first token
+	  	source.unget();
+	  } 
+	  SetCurrentState(INITIAL_STATE);
+
+	 // clear current token weve been storing (cus it was an error)
+	 ClearLexeme();
+       }
         
     } while (!tokenFound && !source.eof());
     
@@ -766,6 +795,27 @@ bool RAT18S_Compiler::IsWhiteSpace(const char curChar)
 }
 
 
+//==============================================================================
+// Description: This function will incremement the column number and line 
+//		number if needed.
+//
+// Input:	curChar - the current character pulled from the input file.
+//
+// Output: NONE
+//
+//==============================================================================
+void RAT18S_Compiler::IncrementFileCounters(const char curChar)
+{
+	if (curChar == ' ' || curChar == '\t')
+	{
+		SetColmNum(GetColmNum()+1);
+	}
+	else if (curChar == '\n')
+	{
+		SetLineNum(GetLineNum()+1);
+	}
+}
+
 
 //==============================================================================
 // Description: This function will print out a given Error along with the 
@@ -785,23 +835,23 @@ void RAT18S_Compiler::PrintError(const ERROR errorType)
 	switch(errorType)
 	{
 		case INVALID_IDENTIFIER:
-			std::cout << " invalid identifier." << std::endl;
+			std::cout << " invalid identifier \"" << GetLexeme() << "\"" << std::endl;
 			break;
 					
 		case INVALID_INT:
-			std::cout << " invalid integer." << std::endl;
+			std::cout << " invalid integer \"" << GetLexeme() << "\"" << std::endl;
 			break;
 				
 		case INVALID_REAL:
-			std::cout << " invalid real." << std::endl;
+			std::cout << " invalid real \"" << GetLexeme() << "\"" << std::endl;
 			break;
 			
 		case INVALID_OPERATOR:
-			std::cout << " invalid operator." << std::endl;
+			std::cout << " invalid operator \"" << GetLexeme() << "\"" << std::endl;
 			break;
 
 		case INVALID_SYMBOL:
-			std::cout << " invalid symbol." << std::endl;
+			std::cout << " invalid symbol \"" << GetLexeme() << "\"" << std::endl;
 			break;
 	
 		default:

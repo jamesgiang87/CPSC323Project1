@@ -12,7 +12,7 @@
 const int KEYWORDS_AMOUNT   = 12;
 const int OPERATOR_AMOUNT   = 8;
 const int SEPARATOR_AMOUNT  = 6;
-const int WHITESPACE_AMOUNT = 3;
+const int WHITESPACE_AMOUNT = 4;
 
 
 // stores all keywords available in RAT18S
@@ -25,7 +25,7 @@ const std::string KEYWORDS[KEYWORDS_AMOUNT] = {"BOOLEAN", "ELSE", "ENDIF", "FALS
 const char SEPARATORS[SEPARATOR_AMOUNT] = {';' , '(' , ')' , '{' , '}' , '%' };
 
 // stores all legal whitespace characters available in RAT18S
-const char WHITESPACES[WHITESPACE_AMOUNT] = {' ', '\t', '\n'};
+const char WHITESPACES[WHITESPACE_AMOUNT] = {' ', '\t', '\n', '\0'};
 
 // stores possible BEGINNINGS (ONLY) of operators to check if a char is an operator 
 const char OPERATORS[OPERATOR_AMOUNT] = {'=', '+', '-', '*', '/', '<', '>', '^'};
@@ -155,6 +155,7 @@ private:
 	bool IsSeparator(const char curChar);
 	bool IsStringLiteral(const char curChar);
 	bool IsWhiteSpace(const char curChar);
+	void IncrementFileCounters(const char curChar);
 	void PrintError(const ERROR errorType);
 
 // LEXER PRIVATE DATA MEMBERS
