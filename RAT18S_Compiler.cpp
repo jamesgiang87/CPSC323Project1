@@ -323,12 +323,14 @@ bool RAT18S_Compiler::CheckSeparators(const char curChar)
 		}
 		else
 		{
-			SetCurrentState(INSIDE_SEPARATOR);
+			// dont care for matching () {} just care that we
+			// notice its a separator
+			SetCurrentState(END_SEPARATOR);
+			SetToken(SEPARATOR);
 			return true;
 		}
 	}
-	else if ((IsSeparator(curChar) && curState == INSIDE_SEPARATOR) ||
-		 (curChar == '%'&& curState == PERCENT_SEPARATOR))
+	else if (curChar == '%'&& curState == PERCENT_SEPARATOR)
 	{
 		// found the closing part of a separator character
 		SetCurrentState(END_SEPARATOR);
@@ -363,6 +365,7 @@ ERROR RAT18S_Compiler::DetermineError()
 		// ERROR CASES FOR IDENTIFIERS
 		case INSIDE_IDENTIFIER:
 		case COULD_END_IDENTIFIER:
+		case DOLLAR_IDENTIFIER:
 			return INVALID_IDENTIFIER;
 		
 		// ERROR CASES FOR NUMBERS
@@ -375,8 +378,8 @@ ERROR RAT18S_Compiler::DetermineError()
 
 		// ERROR CASES FOR OPERATORS
 		case POTENTIAL_OPERATOR:
+		case EQUAL_OPERATOR:
 			return INVALID_OPERATOR;
-
 
 		// ERROR CASE FOR SYMBOLS
 		default:
@@ -439,10 +442,9 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 			// cases for OPERATORS
 				// not all operators need to be here
 			case POTENTIAL_OPERATOR:
-			case EQUAL_OPERATOR:
-				
 				// we have just found a > or < and IT MUST BE A SPACE
-				if (!IsOperator(curChar))
+				//  or we found =< or >=
+				if (!IsWhiteSpace(curChar))
 				{
 					SetCurrentState(END_OPERATOR);
 					SetToken(OPERATOR);
@@ -454,11 +456,25 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 				}
 				
 				break;
+
+			case EQUAL_OPERATOR:
+				// we have just found =
+				// if it is =' ' or == then legal operator
+				if (IsWhiteSpace(curChar) || curChar == '=')
+				{
+					SetCurrentState(END_OPERATOR);
+					SetToken(OPERATOR);
+					return true;
+				}
+				else
+				{
+					throw DetermineError();
+				}
 		
 			// cases for SEPARATORS
 			case INITIAL_STATE:
 				if (IsOperator(curChar) || IsWhiteSpace(curChar) || 
-				    CheckSeparators(curChar))
+				    IsSeparator(curChar))
 				{
 					return false;
 				}
@@ -600,7 +616,11 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 		//  or whitespace
                 if (!IsComment(fileChar) && !IsStringLiteral(fileChar))
                 {
-                    if (!IsWhiteSpace(fileChar))
+			// if its whitespace dont need to unappend... if its
+			//  an operator is it a valid operator as a whole so
+			//  dont unappend part of a valid operator
+                    if (!IsWhiteSpace(fileChar) && 
+			GetCurrentState() != END_OPERATOR)
                     {
                         // push the file pointer back
                         source.unget();
@@ -622,32 +642,47 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
         }
         catch(const ERROR error)
         {
-            	// print the error to the user
-      		PrintError(error);
-		
+		// dont want to unappend part of error token.. we only need to
+		//  unappend when we have to search for new token
+		bool foundNewToken = false;
+
 	   	// while we have found an error we need to find the next token
 		while(!IsWhiteSpace(fileChar) && !IsOperator(fileChar) && 
 			!IsSeparator(fileChar) && !IsComment(fileChar) && 
 			!IsStringLiteral(fileChar) && !source.eof())
 		{
+			foundNewToken = true;
 		 	source.get(fileChar);
-			
+		
+			// append all characters associated with error
+			AppendToLexeme(fileChar);
+	
 			// if we encounter new lines, whitespace then increment
 			//  file counters accordingly
 			IncrementFileCounters(fileChar);
-
 		}
-	
-	  // we found our next token so put it back and reset the FSM state
-	  if (!IsWhiteSpace(fileChar))
-	  {
-		// if not whitespace then we need to store first token
-	  	source.unget();
-	  } 
-	  SetCurrentState(INITIAL_STATE);
 
-	 // clear current token weve been storing (cus it was an error)
-	 ClearLexeme();
+		if (foundNewToken)
+		{
+			// remove last character associated with 
+			//  new token as not part of error
+			RemoveLastCharLexeme();
+	
+			// we found our next token so put it back and reset the FSM state
+	  		if (!IsWhiteSpace(fileChar))
+	  		{
+				// if not whitespace then we need to store first token
+				source.unget();
+	  		}
+		}
+ 
+	  	// print the error to the user
+      		PrintError(error);
+
+		SetCurrentState(INITIAL_STATE);
+
+	 	// clear current token weve been storing (cus it was an error)
+	 	ClearLexeme();
        }
         
     } while (!tokenFound && !source.eof());

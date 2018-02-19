@@ -1,0 +1,7 @@
+Boolean ElSe EnDiF FalsE Get If int put real return true while
+Hey did you know this is an identifier
+;(){}%%
+++ -= += >= <= == = = ^=
+=+ =- =* =/ % @ # ^ c$4 c$4$
+
+
