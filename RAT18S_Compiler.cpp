@@ -238,22 +238,30 @@ bool RAT18S_Compiler::CheckOperators(const char curChar)
 			break;
 
 		case '>':
-		case '<':	
 			if (curState == INITIAL_STATE)
 			{
-				// found either <, or > operator
-				SetCurrentState(POTENTIAL_OPERATOR);
-				return true;
-			}
-			else if ( curState == EQUAL_OPERATOR)
-			{	
-				// found portion of =>, or =< operator
+				// found > operator
 				SetCurrentState(POTENTIAL_OPERATOR);
 				return true;
 			}
 			else
 			{
 				// invalid symbol found in wrong state
+				throw DetermineError();
+			}
+
+			break;
+
+		case '<':
+			// < operator is valid and so is =< but not >= so throw error
+			if (curState == INITIAL_STATE || curState == EQUAL_OPERATOR)
+			{
+				SetCurrentState(END_OPERATOR);
+				SetToken(OPERATOR);
+				return true;
+			}
+			else
+			{
 				throw DetermineError();
 			}
 
@@ -266,16 +274,10 @@ bool RAT18S_Compiler::CheckOperators(const char curChar)
 				SetCurrentState(EQUAL_OPERATOR);
 				return true;
 			}
-			else if (curState == CARROT_OPERATOR)
+			else if (curState == CARROT_OPERATOR || 	// ^=
+				 curState == EQUAL_OPERATOR  ||		// ==
+				 curState == POTENTIAL_OPERATOR)	// >=
 			{
-				// found the ^= operator
-				SetCurrentState(END_OPERATOR);
-				SetToken(OPERATOR);
-				return true;
-			}
-			else if (curState == EQUAL_OPERATOR)
-			{
-				// found the == operator
 				SetCurrentState(END_OPERATOR);
 				SetToken(OPERATOR);
 				return true;
@@ -442,9 +444,9 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 			// cases for OPERATORS
 				// not all operators need to be here
 			case POTENTIAL_OPERATOR:
-				// we have just found a > or < and IT MUST BE A SPACE
-				//  or we found =< or >=
-				if (!IsWhiteSpace(curChar))
+				// we have just found a > and IT MUST BE A SPACE
+				//  or we found >=. Throw error for <=
+				if (IsWhiteSpace(curChar) || curChar == '=')
 				{
 					SetCurrentState(END_OPERATOR);
 					SetToken(OPERATOR);
@@ -458,9 +460,9 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 				break;
 
 			case EQUAL_OPERATOR:
-				// we have just found =
+				// we have just found =, =<
 				// if it is =' ' or == then legal operator
-				if (IsWhiteSpace(curChar) || curChar == '=')
+				if (IsWhiteSpace(curChar) || curChar == '=' || curChar == '<')
 				{
 					SetCurrentState(END_OPERATOR);
 					SetToken(OPERATOR);
@@ -468,9 +470,14 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 				}
 				else
 				{
-					throw DetermineError();
-				}
-		
+					// dont change state but return that we found = operator
+					//  but we need to truncate the current token
+					return true;
+				}	
+				// dont throw error because something could be valid behind this char
+				//  such as => is a = operator and a > operator				
+				break;
+	
 			// cases for SEPARATORS
 			case INITIAL_STATE:
 				if (IsOperator(curChar) || IsWhiteSpace(curChar) || 
@@ -626,7 +633,17 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
                         source.unget();
                         SetColmNum(--colmNum);    // decrease column number
                         RemoveLastCharLexeme();    
-                    }
+                    
+			// found a = operator but need to truncate whatever is
+			//  behind it
+			if (GetCurrentState() == EQUAL_OPERATOR)
+			{
+				// since we truncated we can say we found a
+				//  operator token
+				SetCurrentState(END_OPERATOR);
+				SetToken(OPERATOR);
+			}
+		    }
                 }
             }
             else

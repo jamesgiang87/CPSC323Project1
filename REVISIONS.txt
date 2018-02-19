@@ -7,6 +7,8 @@
 ??? How should we handle encounters with ! comments or "string literals? Should we
     identify the token ! and " but ignore its contents or label contents as identifier tokens?
 	- YES THAT IS HOW WE ARE DOING IT
+??? Should operators like =+ be an error or counted as = +?
+	- CURRENTLY WE ARE MAKING THEM SEPERATE OPERATORS
 
 // **** NEED TO DO ****
 // *** PLEASE CHECK FSM LOGIC!!!
