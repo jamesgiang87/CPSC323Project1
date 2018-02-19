@@ -9,6 +9,8 @@
 	- YES THAT IS HOW WE ARE DOING IT
 ??? Should operators like =+ be an error or counted as = +?
 	- CURRENTLY WE ARE MAKING THEM SEPERATE OPERATORS
+??? Is , and : a separator
+	- IN CODE I CURRENTLY TREAT THEM AS SEPARATORS
 
 // **** NEED TO DO ****
 // *** PLEASE CHECK FSM LOGIC!!!
