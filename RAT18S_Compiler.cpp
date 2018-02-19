@@ -566,15 +566,13 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
         if (GetCurrentState() == INSIDE_COMMENT ||
             GetCurrentState() == INSIDE_STRING_LITERAL)
         {
-            do
-            {
+            while ((!IsComment(fileChar)        &&
+		    !IsStringLiteral(fileChar)) &&
+		    !source.eof())
+	    {
                 source.get(fileChar);
                 SetColmNum(++colmNum);
-                
-            }while ((!IsComment(fileChar)        &&
-                     !IsStringLiteral(fileChar)) &&
-                     !source.eof());
-            
+            }   
         }
         else if (fileChar == '\n'){    SetLineNum(++lineNum);     }
         else {SetColmNum(++colmNum);}

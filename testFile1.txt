@@ -1,5 +1,6 @@
 Boolean ElSe EnDiF FalsE Get If int put real return true while
 Hey did you know this is an identifier
+! CANTREADTHISSENTENCE ! " INVISIBLESENTENCE " """  !!!!
 ;(){}%%
 ++ -= += >= <= =< == < > <> = ^=
 =+ =- =* =/ % @ # ^ c$4 c$4$
