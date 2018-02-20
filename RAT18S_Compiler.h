@@ -64,11 +64,7 @@ enum STATE
 
 	//STATE FOR COMMENTS
 	INSIDE_COMMENT,		// found initial !
-	END_COMMENT,		// found last !
-
-	//STATE FOR STRING LITERALS
-	INSIDE_STRING_LITERAL,	// foudn initial "
-	END_STRING_LITERAL	// found last "
+	END_COMMENT		// found last !
 };
 
 
@@ -89,7 +85,7 @@ enum ERROR
 	INVALID_OPERATOR,	// Ex **, ++, --
 
 	//ERRORS FOR SYMBOLS
-	INVALID_SYMBOL		//Ex @, #, &
+	INVALID_SYMBOL		//Ex @, #, &, "
 };
 
 
@@ -119,7 +115,7 @@ class RAT18S_Compiler
 {
 
 public:
-	RAT18S_Compiler():lineNum(0),colmNum(0),fsmState(INITIAL_STATE) {};
+	RAT18S_Compiler():lineNum(1),colmNum(0),fsmState(INITIAL_STATE) {};
 	TOKEN Lexer(std::ifstream& source); // this function should return a list 
 				           //  of tokens or print them inside it
 
@@ -146,14 +142,13 @@ private:
 	TOKEN_TYPE GetToken() {return token.tokenType;}
 	void SetColmNum(const long long int newColmNum) {colmNum = newColmNum;}
 	void SetCurrentState(const STATE state) {fsmState = state;}
-	void SetLineNum(const long long int newLineNum) {lineNum = newLineNum;}
+	void SetLineNum(const long long int newLineNum) {lineNum = newLineNum; colmNum = 0;}
 	void SetToken(const TOKEN_TYPE token_type) {token.tokenType = token_type;}
 	void RemoveLastCharLexeme() {token.lexeme.pop_back();}
 	bool IsInAcceptingState();
 	bool IsComment(const char curChar);
 	bool IsOperator(const char curChar);
 	bool IsSeparator(const char curChar);
-	bool IsStringLiteral(const char curChar);
 	bool IsWhiteSpace(const char curChar);
 	void IncrementFileCounters(const char curChar);
 	void PrintError(const ERROR errorType);

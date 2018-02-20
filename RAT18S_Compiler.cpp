@@ -410,7 +410,7 @@ ERROR RAT18S_Compiler::DetermineError()
 bool RAT18S_Compiler::EndOfToken(const char curChar)
 {
 	if (IsWhiteSpace(curChar) || IsSeparator(curChar) || IsOperator(curChar)
-	    || IsComment(curChar) || IsStringLiteral(curChar))
+	    || IsComment(curChar))
 	{
 		switch(GetCurrentState())
 		{
@@ -492,13 +492,6 @@ bool RAT18S_Compiler::EndOfToken(const char curChar)
 				SetToken(COMMENT);
 				return true;
 				break;
-			
-			// cases for STRING LITERALS
-			case INSIDE_STRING_LITERAL:
-			case END_STRING_LITERAL:
-				SetToken(TYPE_ERROR);
-				return true;
-				break;
 
 			// dont need it for separatros or comments because we
 			//  know when we find the second one it is accepted
@@ -561,14 +554,11 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
         // retrieve a character from the file white fileChar is not whitespace
         source.get(fileChar);
             
-        // Have the FSM find initial comment/string character and then
-        //  this will catch the last comment/string character
-        if (GetCurrentState() == INSIDE_COMMENT ||
-            GetCurrentState() == INSIDE_STRING_LITERAL)
+        // Have the FSM find initial comment character and then
+        //  this will catch the last comment character
+        if (GetCurrentState() == INSIDE_COMMENT)
         {
-            while ((!IsComment(fileChar)        &&
-		    !IsStringLiteral(fileChar)) &&
-		    !source.eof())
+            while (!IsComment(fileChar) && !source.eof())
 	    {
                 source.get(fileChar);
                 SetColmNum(++colmNum);
@@ -598,17 +588,6 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
                 SetCurrentState(END_COMMENT);
             }
         }
-        else if (IsStringLiteral(fileChar))
-        {
-            if (GetCurrentState() == INITIAL_STATE)
-            {
-                SetCurrentState(INSIDE_STRING_LITERAL);
-            }
-            else
-            {
-                SetCurrentState(END_STRING_LITERAL);
-            }
-        }
         
         try
         {
@@ -617,9 +596,8 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             //  need to move file pointer if it is whitespace
             if (EndOfToken(fileChar))
             {
-		// dont push file pointer back for comments, string literals
-		//  or whitespace
-                if (!IsComment(fileChar) && !IsStringLiteral(fileChar))
+		// dont push file pointer back for comments, or whitespace
+                if (!IsComment(fileChar))
                 {
 			// if its whitespace dont need to unappend... if its
 			//  an operator is it a valid operator as a whole so
@@ -664,7 +642,7 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 	   	// while we have found an error we need to find the next token
 		while(!IsWhiteSpace(fileChar) && !IsOperator(fileChar) && 
 			!IsSeparator(fileChar) && !IsComment(fileChar) && 
-			!IsStringLiteral(fileChar) && !source.eof())
+			!source.eof())
 		{
 			foundNewToken = true;
 		 	source.get(fileChar);
@@ -672,9 +650,12 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 			// append all characters associated with error
 			AppendToLexeme(fileChar);
 	
-			// if we encounter new lines, whitespace then increment
-			//  file counters accordingly
-			IncrementFileCounters(fileChar);
+			if (!IsWhiteSpace(fileChar))
+			{
+				// if we encounter new lines, whitespace then increment
+				//  file counters accordingly
+				IncrementFileCounters(fileChar);
+			}
 		}
 
 		if (foundNewToken)
@@ -691,8 +672,28 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 	  		}
 		}
  
+		if (IsWhiteSpace(fileChar) && !foundNewToken)
+		{
+			// if we encountered an error but its a single character error
+			if (fileChar == '\n' || fileChar == '\0')
+			{
+				SetLineNum(GetLineNum()-1);
+			}
+			else
+			{
+				SetColmNum(GetColmNum()-1);
+			}
+		}
+
 	  	// print the error to the user
       		PrintError(error);
+
+		if(IsWhiteSpace(fileChar))
+		{
+			// if we encountered whitespace/newlines increment file counters
+			//  accordingly as we didnt want to include that with the error
+			IncrementFileCounters(fileChar);
+		}
 
 		SetCurrentState(INITIAL_STATE);
 
@@ -728,14 +729,13 @@ bool RAT18S_Compiler::IsInAcceptingState()
 		case END_OPERATOR:
 		case END_SEPARATOR:
 		case END_COMMENT:
-		case END_STRING_LITERAL:
 			SetCurrentState(INITIAL_STATE);	// reset the FSM
 			return true;	// an accepting state
 
 		// special cases where the FSM is not reset
 		case INSIDE_COMMENT:
-		case INSIDE_STRING_LITERAL:
 			return true;
+	
 		default:
 			return false;	// not an accepting state
 	}	
@@ -803,25 +803,6 @@ bool RAT18S_Compiler::IsSeparator(const char curChar)
 	return false;
 }
 
-//==============================================================================
-// Description: This function will determine if the char passed by argument is
-//		a legal separator in the RAT18S language.
-// 
-// Input: curChar - the current char we are testing to determine if its a 
-//		    legal separator character.
-//
-// Output: true - curChar is a legal separator character for RAT18S.
-//	   false - curChar is an illegal separator character for RAT18S.
-//
-//==============================================================================
-bool RAT18S_Compiler::IsStringLiteral(const char curChar)
-{
-
-	if (curChar == '\"') 	return true;
-	return false;
-}
-
-
 
 //==============================================================================
 // Description: This function will determine if the char passed by argument is
@@ -856,13 +837,13 @@ bool RAT18S_Compiler::IsWhiteSpace(const char curChar)
 //==============================================================================
 void RAT18S_Compiler::IncrementFileCounters(const char curChar)
 {
-	if (curChar == ' ' || curChar == '\t')
-	{
-		SetColmNum(GetColmNum()+1);
-	}
-	else if (curChar == '\n')
+	if (curChar == '\n' || curChar == '\0')
 	{
 		SetLineNum(GetLineNum()+1);
+	}
+	else
+	{
+		SetColmNum(GetLineNum()+1);
 	}
 }
 
@@ -879,7 +860,13 @@ void RAT18S_Compiler::IncrementFileCounters(const char curChar)
 //==============================================================================
 void RAT18S_Compiler::PrintError(const ERROR errorType)
 {
-
+	// gets the front of an error if its not a single character
+	int colmOffset = 0;
+	if (token.lexeme.length() > 1)
+	{
+		// subtract 1 because we want front character not before error
+		colmOffset = token.lexeme.length() - 1;
+	}
 	std::cout << GetLineNum() << ":" << GetColmNum() << " RAT18S error: ";
 
 	switch(errorType)
