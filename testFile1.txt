@@ -1,10 +1,11 @@
 Boolean ElSe EnDiF FalsE Get If int put real return true while
 Hey did you know this is an identifier
 ! CANTREADTHISSENTENCE ! !!
-;(){}%%,:
+;(){}[]%%,:
 ++ -= += >= <= =< == < > <> = ^=
 =+ =- =* =/ 
 
+num1:int
 while (fahr < upper) a = 23.00
 
 % @ # ^ c$4 c$4$ "

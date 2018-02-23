@@ -1,18 +1,23 @@
 ??? QUESTIONS ???
 ???Does the output of the token need to be as user entered? If they entered identifier: Int1
 	would our token output say INT1 or Int1?
-	- WELL I AM MAKING EVERYTHING CAPITALIZED NOT SURE IF IT SHOULD BE THIS WAY
+	- Pick either one
 ??? Is the " a separator or symbol? LINE 473 in RAT18S_Compiler.cpp
-	- I PUT IT AS AN ERROR UNKNOWN
+	- " is not supported in RAT18S
 ??? How should we handle encounters with ! comments or "string literals? Should we
     identify the token ! and " but ignore its contents or label contents as identifier tokens?
 	- YES THAT IS HOW WE ARE DOING IT
 ??? Should operators like =+ be an error or counted as = +?
-	- CURRENTLY WE ARE MAKING THEM SEPERATE OPERATORS
+	- COUNT THEM AS SEPERATE OPERATORS
 ??? Is , and : a separator
-	- IN CODE I CURRENTLY TREAT THEM AS SEPARATORS
+	- THEY ARE SEPARATORS
+??? We have to check for matching ! comments right because if there isnt a matching ! then 
+    we will skip the whole file
+	- 
 
 // **** NEED TO DO ****
+// **** GET AN ERROR IF MISSING ! WHEN END OF FILE IS READ ****
+// **** LONG TOKENS ARE PRINTED RIGHT TO THE OUTPUTFILE ****
 // *** PLEASE CHECK FSM LOGIC!!!
 
 // $$$ RECENT CHANGES $$$

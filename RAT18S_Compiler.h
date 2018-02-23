@@ -11,7 +11,7 @@
 // GLOBAL CONSTANT VARIABLES
 const int KEYWORDS_AMOUNT   = 12;
 const int OPERATOR_AMOUNT   = 8;
-const int SEPARATOR_AMOUNT  = 8;
+const int SEPARATOR_AMOUNT  = 10;
 const int WHITESPACE_AMOUNT = 4;
 
 
@@ -22,7 +22,7 @@ const std::string KEYWORDS[KEYWORDS_AMOUNT] = {"BOOLEAN", "ELSE", "ENDIF", "FALS
     "RETURN", "TRUE", "WHILE"};
 
 // stores all separators available in RAT18S
-const char SEPARATORS[SEPARATOR_AMOUNT] = {';' , ',' , ':' , '(' , ')' , '{' , '}' , '%' };
+const char SEPARATORS[SEPARATOR_AMOUNT] = {';' , ',' , ':' , '(' , ')' , '{' , '}' , '[' , ']' , '%' };
 
 // stores all legal whitespace characters available in RAT18S
 const char WHITESPACES[WHITESPACE_AMOUNT] = {' ', '\t', '\n', '\0'};

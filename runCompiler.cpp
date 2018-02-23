@@ -131,7 +131,7 @@ void OutputToken(std::ofstream& outputFile, const TOKEN token)
             
     }
     
-    double extraSpacing = strlen("identifier") - token.lexeme.length();
+    int extraSpacing = strlen("identifier") - token.lexeme.length();
     outputFile << std::setw(25+extraSpacing) << " " << token.lexeme << "\n";
 }
 

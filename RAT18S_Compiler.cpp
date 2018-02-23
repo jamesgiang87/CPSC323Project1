@@ -570,7 +570,7 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             {
                 source.get(fileChar);
                 SetColmNum(++colmNum);
-                
+                endOfFile = source.eof();
             }
             
         }
@@ -648,7 +648,8 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             {
                 foundNewToken = true;   // we had to search for new token
                 source.get(fileChar);
-                
+                endOfFile = source.eof();
+
                 // append all characters associated with error
                 AppendToLexeme(fileChar);
                 
