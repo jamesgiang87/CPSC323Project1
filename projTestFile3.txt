@@ -29,4 +29,4 @@ while (continueLoop)
 }
 
 ! compute the factorial !
-put(facorial(factorialNum));
+put(factorial(factorialNum));
