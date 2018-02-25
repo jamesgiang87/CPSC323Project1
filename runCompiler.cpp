@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
     // stores the tokens returned from the lexer
     TOKEN token;
     
-    while(!inputFile.eof())
+    while(inputFile.good())
     {
         token = compiler.Lexer(inputFile);
         
