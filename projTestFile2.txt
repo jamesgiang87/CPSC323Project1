@@ -6,7 +6,8 @@ function sumFunc[num1$:int, num2$:int]
 
 %%
 
-int number1$, number2$, sum;	! numbers that we want to sum !
+! numbers that we want to sum !
+int number1$, number2$, sum;	
 
 get(number1$, number2$);
 sum = sumFunc(number1$, number2$);

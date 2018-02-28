@@ -9,7 +9,7 @@
 
 
 // GLOBAL CONSTANT VARIABLES
-const int KEYWORDS_AMOUNT   = 12;
+const int KEYWORDS_AMOUNT   = 13;
 const int OPERATOR_AMOUNT   = 8;
 const int SEPARATOR_AMOUNT  = 10;
 const int WHITESPACE_AMOUNT = 4;
@@ -18,8 +18,7 @@ const int WHITESPACE_AMOUNT = 4;
 // stores all keywords available in RAT18S
 // THIS MUST BE SORTED!!!
 const std::string KEYWORDS[KEYWORDS_AMOUNT] = {"BOOLEAN", "ELSE", "ENDIF", "FALSE",
-    "GET", "IF", "INT", "PUT", "REAL",
-    "RETURN", "TRUE", "WHILE"};
+    "FUNCTION", "GET", "IF", "INT", "PUT", "REAL", "RETURN", "TRUE", "WHILE"};
 
 // stores all separators available in RAT18S
 const char SEPARATORS[SEPARATOR_AMOUNT] = {';' , ',' , ':' , '(' , ')' , '{' , '}' , '[' , ']' , '%' };

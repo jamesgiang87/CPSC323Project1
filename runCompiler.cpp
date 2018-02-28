@@ -63,7 +63,6 @@ int main(int argc, char* argv[])
         if (!token.lexeme.empty())
         {
             OutputToken(outputFile, token);
-            std::cout << "token found was " << token.lexeme << "\n";
         }
         
         // reset the token type and clear lexeme

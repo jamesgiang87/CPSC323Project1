@@ -8,7 +8,7 @@ function factorial(number:int)
 	}
 	else
 	{
-		return number * factorial(n-1);
+		return number * factorial(number-1);
 	}
 }
 

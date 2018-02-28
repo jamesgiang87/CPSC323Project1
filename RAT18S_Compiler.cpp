@@ -381,7 +381,7 @@ ERROR RAT18S_Compiler::DetermineError()
         case POTENTIAL_OPERATOR:
         case EQUAL_OPERATOR:
             return INVALID_OPERATOR;
-            
+        
             // ERROR CASE FOR SYMBOLS
         default:
             return INVALID_SYMBOL;
@@ -402,7 +402,7 @@ ERROR RAT18S_Compiler::DetermineError()
 // Input: curChar - the current character taken from the source file for
 //            evaluation.
 //
-//	 endFile - is true if is end of source file
+//        endFile - is true if it is the end of the file
 //
 // Output: true - End of a token has been found.
 //       false - End of a token has not been found.
@@ -547,22 +547,21 @@ void RAT18S_Compiler::FSM(const char curChar)
 //==============================================================================
 TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 {
-    
-    ClearLexeme();            	// make sure there are no old lexemes
-    SetToken(TYPE_ERROR);	// make sure there is not old token type
+    SetToken(TYPE_ERROR);       // make sure there is not old token type
+    ClearLexeme();            // make sure there are no old lexemes
     bool tokenFound = false;    // if token is found set true
-    char fileChar;            	// stores the chars extracted from file
-    bool endOfFile = false;	// indicates if end of file is reached
-   
+    char fileChar;            // stores the chars extracted from file
+    bool endOfFile = false;     // determines if end of file is reached
+    
     // look for a token until token is found or end of source file is found
     do
     {
-       	// retrieve a character from the file white fileChar is not whitespace
-	source.get(fileChar);
-
-	endOfFile = source.eof();
+        // retrieve a character from the file white fileChar is not whitespace
+        source.get(fileChar);
+    
+        endOfFile = source.eof();
         
-	// Have the FSM find initial comment character and then
+        // Have the FSM find initial comment character and then
         //  this will catch the last comment character
         if (GetCurrentState() == INSIDE_COMMENT)
         {
@@ -648,8 +647,8 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             {
                 foundNewToken = true;   // we had to search for new token
                 source.get(fileChar);
+                
                 endOfFile = source.eof();
-
                 // append all characters associated with error
                 AppendToLexeme(fileChar);
                 
