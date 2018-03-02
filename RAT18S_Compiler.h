@@ -36,33 +36,32 @@ enum STATE
     
     //STATE FOR IDENTIFIERS
     INSIDE_IDENTIFIER,    // only when it sees a digit after letter
-    COULD_END_IDENTIFIER,    // only last letter, or letter in the middle
+    COULD_END_IDENTIFIER, // only last letter, or letter in the middle
     DOLLAR_IDENTIFIER,    // only last character can be $ if its found
-    END_IDENTIFIER,        // AN ACCEPTING STATE IDENTIFIERS
+    END_IDENTIFIER,       // AN ACCEPTING STATE IDENTIFIERS
     
-    //STATE FOR NUMBERS
-    INSIDE_NUMBER,        // a digit is found and current state is initial
-    END_INT,        // AN ACCEPTING STATE FOR INTEGERS
+    //STATE FOR INTEGER 
+    INSIDE_INTEGER,     // a digit is found and current state is initial
+    END_INTEGER,       	// AN ACCEPTING STATE FOR INTEGERS
     INSIDE_REAL,        // when a '.' is found after a digit is
-    COULD_END_REAL,        // when a digit is found after a '.'
-    END_REAL,        // AN ACCEPTING STATE FOR REALS
+    COULD_END_REAL,     // when a digit is found after a '.'
+    END_REAL,        	// AN ACCEPTING STATE FOR REALS
     
     //STATE FOR KEYWORDS
     END_KEYWORD,        // AN ACCEPTING STATE FOR KEYWORDS
     
     //STATE FOR OPERATORS
     CARROT_OPERATOR,    // found an initial ^
-    EQUAL_OPERATOR,        // found =
-    POTENTIAL_OPERATOR,    // found +, -, /, *, >, <
-    END_OPERATOR,        // AN ACCEPTING STATE FOR OPERATORS
+    EQUAL_OPERATOR,     // found =
+    POTENTIAL_OPERATOR, // found +, -, /, *, >, <
+    END_OPERATOR,       // AN ACCEPTING STATE FOR OPERATORS
     
     //STATE FOR SEPARATORS
-    INSIDE_SEPARATOR,    // found {, (
-    PERCENT_SEPARATOR,    // found %
-    END_SEPARATOR,        // AN ACCEPTING STATE FOR SEPARATORS
+    PERCENT_SEPARATOR,  // found %
+    END_SEPARATOR,      // AN ACCEPTING STATE FOR SEPARATORS
     
     //STATE FOR COMMENTS
-    INSIDE_COMMENT,        // found initial !
+    INSIDE_COMMENT,    // found initial !
     END_COMMENT        // found last !
 };
 
@@ -77,7 +76,7 @@ enum ERROR
     INVALID_IDENTIFIER,    // Ex a8, a$2
     
     //ERRORS FOR NUMBERS
-    INVALID_INT,        // Ex 8a
+    INVALID_INTEGER,     // Ex 8a
     INVALID_REAL,        // Ex 7.7. .9
     
     //ERRORS FOR OPERATORS

@@ -152,16 +152,16 @@ bool RAT18S_Compiler::CheckNumber(const char curChar)
     if (isDigit && curState == INITIAL_STATE)
     {
         // found a number so we are inside a number
-        SetCurrentState(INSIDE_NUMBER);
+        SetCurrentState(INSIDE_INTEGER);
         return true;
     }
-    else if (isDigit && curState == INSIDE_NUMBER)
+    else if (isDigit && curState == INSIDE_INTEGER)
     {
         return true;
     }
     else if (curChar == '.')
     {
-        if (curState == INSIDE_NUMBER)
+        if (curState == INSIDE_INTEGER)
         {
             SetCurrentState(INSIDE_REAL);
             return true;
@@ -370,8 +370,8 @@ ERROR RAT18S_Compiler::DetermineError()
             return INVALID_IDENTIFIER;
             
             // ERROR CASES FOR NUMBERS
-        case INSIDE_NUMBER:
-            return INVALID_INT;
+        case INSIDE_INTEGER:
+            return INVALID_INTEGER;
             
         case INSIDE_REAL:
         case COULD_END_REAL:
@@ -427,10 +427,10 @@ bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
                 break;
                 
                 // cases for NUMBERS
-            case INSIDE_NUMBER:
+            case INSIDE_INTEGER:
                 // we have just found out that its is not a
                 //  number anymore so we label it as accepted
-                SetCurrentState(END_INT);
+                SetCurrentState(END_INTEGER);
                 SetToken(INT);
                 return true;
                 break;
@@ -455,6 +455,12 @@ bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
                     SetToken(OPERATOR);
                     return true;
                 }
+  		else if (IsSeparator(curChar) || IsComment(curChar))
+		{
+			// need to unget character from > such as when
+			//  >] or >( or >!
+			return true;
+		}
                 else
                 {
                     throw DetermineError();
@@ -544,6 +550,9 @@ void RAT18S_Compiler::FSM(const char curChar)
 
 
 //==============================================================================
+// Description: This function will return one token from the source file.
+// Input: NONE
+// Output: Returns the token found. 
 //==============================================================================
 TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
 {
@@ -593,7 +602,7 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             {
                 SetCurrentState(INSIDE_COMMENT);
             }
-            else
+            else if (GetCurrentState() == INSIDE_COMMENT)
             {
                 SetCurrentState(END_COMMENT);
             }
@@ -607,7 +616,8 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
             if (EndOfToken(fileChar, endOfFile))
             {
                 // dont push file pointer back for comment/string literal or whitespace
-                if (!IsComment(fileChar))
+                if (!IsComment(fileChar) || 
+		    (IsComment(fileChar) && GetCurrentState() == POTENTIAL_OPERATOR))
                 {
                     if (!IsWhiteSpace(fileChar) && GetCurrentState() != END_OPERATOR)
                     {
@@ -618,7 +628,8 @@ TOKEN RAT18S_Compiler::Lexer(std::ifstream& source)
                         
                         // found a = operator but had to truncate whatever was
                         //  behind it
-                        if (GetCurrentState() == EQUAL_OPERATOR)
+                        if (GetCurrentState() == EQUAL_OPERATOR ||
+			    GetCurrentState() == POTENTIAL_OPERATOR)
                         {
                             SetCurrentState(END_OPERATOR);
                             SetToken(OPERATOR);
@@ -725,7 +736,7 @@ bool RAT18S_Compiler::IsInAcceptingState()
     switch(fsmState)
     {
         case END_IDENTIFIER:
-        case END_INT:
+        case END_INTEGER:
         case END_REAL:
         case END_KEYWORD:
         case END_OPERATOR:
@@ -872,7 +883,7 @@ void RAT18S_Compiler::PrintError(const ERROR errorType)
             std::cout << " invalid identifier \"" << GetLexeme() << "\"" << std::endl;
             break;
             
-        case INVALID_INT:
+        case INVALID_INTEGER:
             std::cout << " invalid integer \"" << GetLexeme() << "\"" << std::endl;
             break;
             
