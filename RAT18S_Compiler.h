@@ -6,7 +6,7 @@
 #define RAT18S_Compiler_HEADER
 
 #include <string>
-
+#include <fstream>
 
 // GLOBAL CONSTANT VARIABLES
 const int KEYWORDS_AMOUNT   = 13;
@@ -58,11 +58,8 @@ enum STATE
     
     //STATE FOR SEPARATORS
     PERCENT_SEPARATOR,  // found %
-    END_SEPARATOR,      // AN ACCEPTING STATE FOR SEPARATORS
+    END_SEPARATOR       // AN ACCEPTING STATE FOR SEPARATORS
     
-    //STATE FOR COMMENTS
-    INSIDE_COMMENT,    // found initial !
-    END_COMMENT        // found last !
 };
 
 
@@ -97,7 +94,6 @@ enum TOKEN_TYPE
     REAL,
     OPERATOR,
     SEPARATOR,
-    COMMENT,
     SYMBOL
 };
 
@@ -114,7 +110,7 @@ class RAT18S_Compiler
     
 public:
     RAT18S_Compiler():lineNum(1),colmNum(0),fsmState(INITIAL_STATE) {};
-    TOKEN Lexer(std::ifstream& source); // this function should return a list
+    TOKEN Lexer(); // this function should return a list
     //  of tokens or print them inside it
     
     // LEXER FSMs AND HELPER FUNCTIONS
@@ -131,18 +127,20 @@ private:
     // LEXER HELPER FUNCTIONS
     void AppendToLexeme(const char curChar) {token.lexeme += curChar;}
     void CapitalizeChar(char& curChar);
-    void ClearLexeme() {token.lexeme.clear();}
+    inline void ClearLexeme() {token.lexeme.clear();}
     ERROR DetermineError();
     long long int GetColmNum() {return colmNum;}
     STATE GetCurrentState() {return fsmState;}
     std::string GetLexeme(){return token.lexeme;}
     long long int GetLineNum() {return lineNum;}
     TOKEN_TYPE GetToken() {return token.tokenType;}
-    void SetColmNum(const long long int newColmNum) {colmNum = newColmNum;}
+    void SetColmNum(const long long int newColmNum) 
+    {colmNum = newColmNum; if (colmNum <= 0){colmNum = 1;}}
     void SetCurrentState(const STATE state) {fsmState = state;}
-    void SetLineNum(const long long int newLineNum) {lineNum = newLineNum; colmNum = 0;}
+    void SetLineNum(const long long int newLineNum) 
+     {lineNum = newLineNum; if (lineNum <= 0) {lineNum = 1;} colmNum = 0;}
     void SetToken(const TOKEN_TYPE token_type) {token.tokenType = token_type;}
-    void RemoveLastCharLexeme() {token.lexeme.pop_back();}
+    inline void RemoveLastCharLexeme() {token.lexeme.pop_back();}
     bool IsInAcceptingState();
     bool IsComment(const char curChar);
     bool IsOperator(const char curChar);
@@ -150,12 +148,25 @@ private:
     bool IsWhiteSpace(const char curChar);
     void IncrementFileCounters(const char curChar);
     void PrintError(const ERROR errorType);
-    
+
+public:
+    // FILE FUNCTIONS
+    inline void OpenFile(char* fileName) {inputFile.open(fileName);}
+    inline void OpenFile(std::string fileName) {inputFile.open(fileName);}
+    inline bool FileFail() {return inputFile.fail();}
+    inline bool FileGood() {return inputFile.good();}
+    inline void CloseFile() {inputFile.close();}
+
+private:    
     // LEXER PRIVATE DATA MEMBERS
     long long int lineNum;    // stores the line number for the inputfile
     long long int colmNum;    // stores the column number for the inputfile
     TOKEN token;        // stores the current token
     STATE fsmState;        // stores the current state of the FSM
+
+    // FILE DATA MEMBERS
+    std::ifstream inputFile;
+
 };
 
 #endif    // END OF RAT18Scompiler_HEADER

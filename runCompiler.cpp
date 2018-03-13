@@ -3,18 +3,18 @@
 // Description: This program will run a lexical analysis on the input file given
 
 
+
 #include "RAT18S_Compiler.h"
 #include <iostream>
-#include <fstream>
 #include <iomanip>
 
 void OutputToken(std::ofstream& outputFile, const TOKEN token);
+void PrintOutputHeader(std::ofstream& outputFile);
 
 int main(int argc, char* argv[])
 {
-    
-    // stores the input file
-    std::ifstream inputFile;
+    // create a RAT18S object
+    RAT18S_Compiler compiler;
     
     // stores the output file
     std::ofstream outputFile;
@@ -23,9 +23,9 @@ int main(int argc, char* argv[])
     if (argc == 2)
     {
         //if we recieved one argument from command line that is the file
-        inputFile.open(argv[1]);
+        compiler.OpenFile(argv[1]);
         
-        if (inputFile.fail())
+        if (compiler.FileFail())
         {
             std::cout << "File " << argv[1] << " not found..." << std::endl;
             return -1;    //error code, file not found
@@ -36,29 +36,23 @@ int main(int argc, char* argv[])
         std::string fileName;
         std::cout << "Please enter a filename: ";
         std::cin >> fileName;
-        inputFile.open(fileName);
+        compiler.OpenFile(fileName);
         
-        if (inputFile.fail())
+        if (compiler.FileFail())
         {
             std::cout << "File " << fileName << " not found..." << std::endl;
             return -1;    // error code, file not found
         }
     }
-    
-    // create output file to store output to
-    outputFile.open("LexerAnalysis.txt");
-    outputFile << "Token\t\t\t\t\tLexeme\n";
-    outputFile << "----------------------------------------------\n";
-    
-    // create a RAT18S object
-    RAT18S_Compiler compiler;
-    
+ 
+    PrintOutputHeader(outputFile);   
+        
     // stores the tokens returned from the lexer
     TOKEN token;
     
-    while(inputFile.good())
+    while(compiler.FileGood())
     {
-        token = compiler.Lexer(inputFile);
+        token = compiler.Lexer();
         
         if (!token.lexeme.empty())
         {
@@ -74,10 +68,20 @@ int main(int argc, char* argv[])
     outputFile.close();
     
     // close the input file
-    inputFile.close();
+    compiler.CloseFile();
     
     return 0;
 }
+
+
+void PrintOutputHeader(std::ofstream& outputFile)
+{
+    // create output file to store output to
+    outputFile.open("LexerAnalysis.txt");
+    outputFile << "Token\t\t\t\t\tLexeme\n";
+    outputFile << "----------------------------------------------\n";
+}
+
 
 
 void OutputToken(std::ofstream& outputFile, const TOKEN token)
@@ -111,11 +115,6 @@ void OutputToken(std::ofstream& outputFile, const TOKEN token)
         case SEPARATOR:
             outputFile << std::left << std::setw(strlen("identifier"));
             outputFile << "separator";
-            break;
-            
-        case COMMENT:
-            outputFile << std::left << std::setw(strlen("identifier"));
-            outputFile << "comment";
             break;
             
         case SYMBOL:
