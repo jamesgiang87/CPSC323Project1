@@ -675,6 +675,13 @@ TOKEN RAT18S_Compiler::Lexer()
 	    {
    		PrintError(error);
 		RemoveLastCharLexeme();
+	   	
+		// reset the FSM state
+		SetCurrentState(INITIAL_STATE);
+		    
+	    	//clear current token weve been storing
+		ClearLexeme();
+
 	    }
 	    else
 	    {
