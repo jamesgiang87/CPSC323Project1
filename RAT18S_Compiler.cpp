@@ -51,7 +51,7 @@ bool RAT18S_Compiler::CheckIdentifier(const char curChar)
     STATE curState = GetCurrentState();
     
     if (std::isalpha(curChar) && (curState == INITIAL_STATE
-                                  || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
+        || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
     {
         // identifiers must lead with a letter or end with a
         // letter with the exception of ending with a $
@@ -237,22 +237,8 @@ bool RAT18S_Compiler::CheckOperators(const char curChar)
             break;
             
         case '>':
-            if (curState == INITIAL_STATE)
-            {
-                // found > operator
-                SetCurrentState(POTENTIAL_OPERATOR);
-                return true;
-            }
-            else
-            {
-                // invalid symbol found in wrong state
-                throw DetermineError();
-            }
-            
-            break;
-            
         case '<':
-            // < operator is valid and so is =< but not >= so throw error
+            // < operator is valid and so is =< or => 
             if (curState == INITIAL_STATE || curState == EQUAL_OPERATOR)
             {
                 SetCurrentState(END_OPERATOR);
@@ -330,7 +316,6 @@ bool RAT18S_Compiler::CheckSeparators(const char curChar)
             return true;
         }
     }
-    //else if ((IsSeparator(curChar) && curState == INSIDE_SEPARATOR) ||
       else if (curChar == '%' && curState == PERCENT_SEPARATOR)
     {
         // found the closing part of a separator character
@@ -341,7 +326,6 @@ bool RAT18S_Compiler::CheckSeparators(const char curChar)
     
     return false;
 }
-
 
 
 //==============================================================================
@@ -422,7 +406,7 @@ bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
                 return true;
                 break;
                 
-                // cases for NUMBERS
+                // cases for INTEGERS
             case INSIDE_INTEGER:
                 // we have just found out that its is not a
                 //  number anymore so we label it as accepted
@@ -451,12 +435,12 @@ bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
                     SetToken(OPERATOR);
                     return true;
                 }
-  		else if (IsSeparator(curChar) || IsComment(curChar))
-		{
-			// need to unget character from > such as when
-			//  >] or >( or >!
-			return true;
-		}
+                else if (IsSeparator(curChar) || IsComment(curChar))
+                {
+                    // need to unget character from > such as when
+                    // >[ or >( or >%% or >;
+                    return true;
+                }
                 else
                 {
                     throw DetermineError();
@@ -468,7 +452,8 @@ bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
                 
                 // we have just found =, =<
                 // if it is =' ' or == then legal operator
-                if (IsWhiteSpace(curChar) || curChar == '=' || curChar == '<')
+                if (IsWhiteSpace(curChar) || curChar == '=' 
+		    || curChar == '<' || curChar == '>')
                 {
                     SetCurrentState(END_OPERATOR);
                     SetToken(OPERATOR);
@@ -536,33 +521,33 @@ void RAT18S_Compiler::FSM(const char curChar)
     {}
     else
     {
-	// check if invalid symbol found on end of a token
-	ERROR error = DetermineError();
-
-	if(error == INVALID_IDENTIFIER && curState == COULD_END_IDENTIFIER)
-	{
-		// remove the invalid symbol after the identifier
-		RemoveLastCharLexeme();
-		// we have found an idenfiter token
-		SetCurrentState(END_IDENTIFIER);
-		SetToken(IDENTIFIER);
-		// move the file pointer pointing back at the invalid symbol
-		inputFile.unget();
-	}
-	else
-	{
-		// separator was found in an invalid state
-		throw error;
-	}
+        // check if invalid symbol found on end of a token
+        ERROR error = DetermineError();
+        
+        if (error == INVALID_IDENTIFIER && curState == COULD_END_IDENTIFIER)
+        {
+            // remove the invalid symbol after the identifier
+            RemoveLastCharLexeme();
+            // we have found a identifier token
+            SetCurrentState(END_IDENTIFIER);
+            SetToken(IDENTIFIER);
+            // move the file pointer pointing back at the invalid symbol
+            inputFile.unget();
+        }
+        else
+        {
+            // separator was found in an invalid state
+            throw error;
+        }
     }
 }
 
 
 //==============================================================================
 // Description: This function will return one token from the source file each
-//		call.
+//              call.
 // Input: NONE
-// Output: Returns the token found. 
+// Output: Returns the token found.
 //==============================================================================
 TOKEN RAT18S_Compiler::Lexer()
 {
@@ -579,42 +564,45 @@ TOKEN RAT18S_Compiler::Lexer()
         inputFile.get(fileChar);
     
         endOfFile = inputFile.eof();
- 
-	IncrementFileCounters(fileChar);
-       
-	// This will overpass comments
-        if(IsComment(fileChar))
-	{
-		// store the current line and column number incase we encounter eof with
-		//  an error we can display correct line/column numbers
-		long long curLine = GetLineNum();
-		long long curColm = GetColmNum();
- 
-		do
-		{
-			inputFile.get(fileChar);
-			IncrementFileCounters(fileChar);
-			endOfFile = inputFile.eof();
-			if(endOfFile)
-			{
-				// set the line/colmn number to where it was
-				//  before we encountered eof
-				SetLineNum(curLine);
-				SetColmNum(curColm);
-				// adjust counter by char we last read
-				IncrementFileCounters(fileChar);
-				break;
-			}
-		}while(!IsComment(fileChar));
-
-		//If we found last ! character
-		if (IsComment(fileChar) && !endOfFile)
-		{
-			// get a character from the file
-			inputFile.get(fileChar);
-			IncrementFileCounters(fileChar);
-		}
+        
+        IncrementFileCounters(fileChar);
+        
+        // Have the FSM find initial comment character and then
+        //  this will catch the last comment character
+        if (IsComment(fileChar))
+        {
+            // store the current line and column number encase we encounter
+            //  eof and need to display an error
+            long long curLine = GetLineNum();
+            long long curColm = GetColmNum();
+            
+            do
+            {
+                inputFile.get(fileChar);
+                IncrementFileCounters(fileChar);
+                endOfFile = inputFile.eof();
+                if (endOfFile)
+                {
+                    // set the line/column number to what it was before we
+                    //  encountered eof
+                    SetLineNum(curLine);
+                    SetColmNum(curColm);
+                    // adjust counters by what we last char found
+                    IncrementFileCounters(fileChar);
+                    break;
+                }
+            } while (!IsComment(fileChar));
+            
+            //If we found another comment
+            if (IsComment(fileChar) && !endOfFile)
+            {
+                //get another character if not eof
+                inputFile.get(fileChar);
+                IncrementFileCounters(fileChar);
+            }
+            
         }
+        
         
         // append the fileChar to the token
         if (!IsWhiteSpace(fileChar))
@@ -633,8 +621,7 @@ TOKEN RAT18S_Compiler::Lexer()
             if (EndOfToken(fileChar, endOfFile))
             {
                 // dont push file pointer back for comment/string literal or whitespace
-                if (!IsComment(fileChar) || 
-		    (IsComment(fileChar) && GetCurrentState() == POTENTIAL_OPERATOR))
+                if (!IsComment(fileChar) || (IsComment(fileChar) && GetCurrentState() == POTENTIAL_OPERATOR))
                 {
                     if (!IsWhiteSpace(fileChar) && GetCurrentState() != END_OPERATOR)
                     {
@@ -646,7 +633,7 @@ TOKEN RAT18S_Compiler::Lexer()
                         // found a = operator but had to truncate whatever was
                         //  behind it
                         if (GetCurrentState() == EQUAL_OPERATOR ||
-			    GetCurrentState() == POTENTIAL_OPERATOR)
+                            GetCurrentState() == POTENTIAL_OPERATOR)
                         {
                             SetCurrentState(END_OPERATOR);
                             SetToken(OPERATOR);
@@ -668,88 +655,107 @@ TOKEN RAT18S_Compiler::Lexer()
         catch(const ERROR error)
         {
             bool foundNewToken = false;
- 
-	    // if its an invalid symbol then we just remove the first character
-	    //  ex. @hi want to print @ as error and print identifier
- 	    if(error == INVALID_SYMBOL)
-	    {
-   		PrintError(error);
-		RemoveLastCharLexeme();
-	   	
-		// reset the FSM state
-		SetCurrentState(INITIAL_STATE);
-		    
-	    	//clear current token weve been storing
-		ClearLexeme();
+            
+            // if its an invalid symbol then we just remove the first character
+            //  ex. @hi want to print @ as error and print identifier hi
+            if (error == INVALID_SYMBOL)
+            {
+                if (IsWhiteSpace(fileChar))
+                {
+                    // append the space for correct colm numbers to be
+                    //  displayed
+                    AppendToLexeme(fileChar);
+                }
 
-	    }
-	    else
-	    {
-		    // while we have found an error we need to find next token
-		    while(!IsWhiteSpace(fileChar) && !IsOperator(fileChar) &&
-			  !IsSeparator(fileChar) && !IsComment(fileChar) &&
-			  !endOfFile)
-		    {
-			foundNewToken = true;   // we had to search for new token
-			inputFile.get(fileChar);
-			
-			endOfFile = inputFile.eof();
-			// append all characters associated with error
-			AppendToLexeme(fileChar);
-			
-			if (!IsWhiteSpace(fileChar))
-			{
-			    // if we encounter whitespace/newlines incrememnt file counters
-			    //  accordingly
-			    IncrementFileCounters(fileChar);
-			}
-		    }
-		    
-		    // remove last character associated with new token as not part of error
-		    if (foundNewToken)
-		    {
-			RemoveLastCharLexeme();
-		    
-			// we found our next token so put it back and reset the FSM state
-			if (!IsWhiteSpace(fileChar))
-			{   // if not whitespace then we need to store that token
-			    inputFile.unget();
-			}
-		    }
-		    else if (IsWhiteSpace(fileChar) && !foundNewToken)
-		    {
-			// if we encountered an error but its a single character
-			if (fileChar == '\n' || fileChar == '\0')
-			{
-			    SetLineNum(GetLineNum()-1);
-			}
-			else
-			{
-			    SetColmNum(GetColmNum()-1);
-			}
-		    }
-		    else if (IsSeparator(fileChar))
-		    {
-			RemoveLastCharLexeme();
-			inputFile.unget();
-		    }
-		   
-		    // print the error to the user
-		    PrintError(error);
-		
-		    if (IsWhiteSpace(fileChar))
-		    {
-			// if we encounter whitespace/newlines incrememnt file counters
-			//  accordingly
-			IncrementFileCounters(fileChar);
-		    }
-		    
-		    SetCurrentState(INITIAL_STATE);
-		    
-		    //clear current token weve been storing
-		    ClearLexeme();
-		}
-   	  } 
+                PrintError(error);
+                
+                RemoveLastCharLexeme();
+
+                // reset the FSM state
+                SetCurrentState(INITIAL_STATE);
+                
+                //clear current token weve been storing
+                ClearLexeme();
+            }
+            // if we have an invalid symbol after a legal identifier then we
+            //  need to return the token and print invalid symbol (dont believe
+            //  this is correct way to do it because we would have to call the
+            //  lexer again to print error but then again it doesnt really matter
+            //  because the next time lexer is called then it will print the
+            //  same error and then try to find the next token
+            else
+            {
+            
+                // while we have found an error we need to find next token
+                while(!IsWhiteSpace(fileChar) && !IsOperator(fileChar) &&
+                      !IsSeparator(fileChar) && !IsComment(fileChar) &&
+                      !endOfFile)
+                {
+                    foundNewToken = true;   // we had to search for new token
+                    inputFile.get(fileChar);
+                    endOfFile = inputFile.eof();
+                    
+                    // append all characters associated with error
+                    AppendToLexeme(fileChar);
+                    
+                    if (!IsWhiteSpace(fileChar))
+                    {
+                        // if we encounter whitespace/newlines incrememnt file
+                        //  counters accordingly
+                        IncrementFileCounters(fileChar);
+                    }
+                }
+                
+                // remove last character associated with new token as not part
+                //  of error
+                if (foundNewToken)
+                {
+                    RemoveLastCharLexeme();
+                
+                
+                    // we found our next token so put it back and reset the FSM
+                    //  state
+                    if (!IsWhiteSpace(fileChar))
+                    {   // if not whitespace then we need to store that token
+                        inputFile.unget();
+                    }
+                }
+                else if (IsWhiteSpace(fileChar) && !foundNewToken)
+                {
+                    // if we encountered an error but its a single character
+                    if (fileChar == '\n' || fileChar == '\0')
+                    {
+                            SetLineNum(GetLineNum()-1);
+                    }
+                    else
+                    {
+                            SetColmNum(GetColmNum()-1);
+                    }
+                }
+                else if (IsSeparator(fileChar))
+                {
+                    RemoveLastCharLexeme();
+                    inputFile.unget();
+                    SetColmNum(GetColmNum()-1);
+                }
+                
+                // print the error to the user
+                PrintError(error);
+            
+                if (IsWhiteSpace(fileChar))
+                {
+                    // if we encounter whitespace/newlines incrememnt file
+                    //  counters accordingly
+                    IncrementFileCounters(fileChar);
+                }
+                
+                SetCurrentState(INITIAL_STATE);
+                
+                //clear current token weve been storing
+                ClearLexeme();
+            }
+        }
+        
     } while (!tokenFound && !endOfFile);
     
     return token;
@@ -778,9 +784,13 @@ bool RAT18S_Compiler::IsInAcceptingState()
         case END_KEYWORD:
         case END_OPERATOR:
         case END_SEPARATOR:
+//        case END_COMMENT:
             SetCurrentState(INITIAL_STATE);    // reset the FSM
             return true;    // an accepting state
             
+            // special cases where the FSM is not reset
+//        case INSIDE_COMMENT:
+//            return true;
         
         default:
             return false;    // not an accepting state
