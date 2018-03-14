@@ -9,7 +9,7 @@
 #include <cctype>
 #include <fstream>
 #include <iostream>
-#include "RAT18S_Compiler.h"
+#include "CLexer.h"
 
 // ========================= Lexical Analysis Start ============================
 
@@ -21,7 +21,7 @@
 // Output: NONE
 //
 //==============================================================================
-void RAT18S_Compiler::CapitalizeChar(char& curChar)
+void CLexer::CapitalizeChar(char& curChar)
 {
     // if curChar is an upper case letter or a symbol dont need to
     //  upper case...
@@ -46,9 +46,9 @@ void RAT18S_Compiler::CapitalizeChar(char& curChar)
 //       false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool RAT18S_Compiler::CheckIdentifier(const char curChar)
+bool CLexer::CheckIdentifier(const char curChar)
 {
-    STATE curState = GetCurrentState();
+    State curState = GetCurrentState();
     
     if (std::isalpha(curChar) && (curState == INITIAL_STATE
         || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
@@ -94,7 +94,7 @@ bool RAT18S_Compiler::CheckIdentifier(const char curChar)
 //       false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18S_Compiler::CheckKeyword()
+bool CLexer::CheckKeyword()
 {
     // stores the lexeme
     std::string lexeme = GetLexeme();
@@ -144,10 +144,10 @@ bool RAT18S_Compiler::CheckKeyword()
 //       false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18S_Compiler::CheckNumber(const char curChar)
+bool CLexer::CheckNumber(const char curChar)
 {
     bool isDigit = std::isdigit(curChar);
-    STATE curState = GetCurrentState();
+    State curState = GetCurrentState();
     
     if (isDigit && curState == INITIAL_STATE)
     {
@@ -194,9 +194,9 @@ bool RAT18S_Compiler::CheckNumber(const char curChar)
 //       false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool RAT18S_Compiler::CheckOperators(const char curChar)
+bool CLexer::CheckOperators(const char curChar)
 {
-    STATE curState = GetCurrentState();
+    State curState = GetCurrentState();
     
     switch(curChar)
     {
@@ -294,9 +294,9 @@ bool RAT18S_Compiler::CheckOperators(const char curChar)
 //       false - if the state of the Finite State Machine is unchanged.
 //
 //==============================================================================
-bool RAT18S_Compiler::CheckSeparators(const char curChar)
+bool CLexer::CheckSeparators(const char curChar)
 {
-    STATE curState = GetCurrentState();
+    State curState = GetCurrentState();
     
     if (IsSeparator(curChar) && curState == INITIAL_STATE)
     {
@@ -328,6 +328,7 @@ bool RAT18S_Compiler::CheckSeparators(const char curChar)
 }
 
 
+
 //==============================================================================
 // Description: This function will determine an error given the current state
 //        of the FSM (Finite State Machine). It will then return the
@@ -335,11 +336,11 @@ bool RAT18S_Compiler::CheckSeparators(const char curChar)
 //
 // Input: NONE
 //
-// Output: ERROR - returns an enum error value to the corresponding error that
+// Output: Error - returns an enum error value to the corresponding error that
 //           occured.
 //
 //==============================================================================
-ERROR RAT18S_Compiler::DetermineError()
+Error CLexer::DetermineError()
 {
     switch(GetCurrentState())
     {
@@ -372,6 +373,7 @@ ERROR RAT18S_Compiler::DetermineError()
 }
 
 
+
 //==============================================================================
 // Description: This function will check the given character recieved from the
 //        source file and compare it with the current FSM (Finite State
@@ -388,7 +390,7 @@ ERROR RAT18S_Compiler::DetermineError()
 //       false - End of a token has not been found.
 //
 //==============================================================================
-bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
+bool CLexer::EndOfToken(const char curChar, const bool endFile)
 {
     
     if (IsWhiteSpace(curChar) || IsSeparator(curChar) || IsOperator(curChar)
@@ -498,9 +500,9 @@ bool RAT18S_Compiler::EndOfToken(const char curChar, const bool endFile)
 // Output: NONE
 //
 //==============================================================================
-void RAT18S_Compiler::FSM(const char curChar)
+void CLexer::FSM(const char curChar)
 {
-    STATE curState = GetCurrentState();
+    State curState = GetCurrentState();
     
     if (IsWhiteSpace(curChar) && curState == INITIAL_STATE)
     {}
@@ -522,7 +524,7 @@ void RAT18S_Compiler::FSM(const char curChar)
     else
     {
         // check if invalid symbol found on end of a token
-        ERROR error = DetermineError();
+        Error error = DetermineError();
         
         if (error == INVALID_IDENTIFIER && curState == COULD_END_IDENTIFIER)
         {
@@ -532,7 +534,7 @@ void RAT18S_Compiler::FSM(const char curChar)
             SetCurrentState(END_IDENTIFIER);
             SetToken(IDENTIFIER);
             // move the file pointer pointing back at the invalid symbol
-            inputFile.unget();
+            m_inputFile.unget();
         }
         else
         {
@@ -543,13 +545,37 @@ void RAT18S_Compiler::FSM(const char curChar)
 }
 
 
+
+//==============================================================================
+// Description: This function will incremement the column number and line
+//              number if needed.
+//
+// Input:       curChar - the current character pulled from the input file.
+//
+// Output: NONE
+//
+//==============================================================================
+void CLexer::IncrementFileCounters(const char curChar)
+{
+    if (curChar == '\n' || curChar == '\0')
+    {
+        SetLineNum(GetLineNum()+1);
+    }
+    else
+    {
+        SetColmNum(GetColmNum()+1);
+    }
+}
+
+
+
 //==============================================================================
 // Description: This function will return one token from the source file each
 //              call.
 // Input: NONE
 // Output: Returns the token found.
 //==============================================================================
-TOKEN RAT18S_Compiler::Lexer()
+CToken CLexer::Lexer()
 {
     SetToken(TYPE_ERROR);       // make sure there is not old token type
     ClearLexeme();            // make sure there are no old lexemes
@@ -561,9 +587,9 @@ TOKEN RAT18S_Compiler::Lexer()
     do
     {
         // retrieve a character from the file white fileChar is not whitespace
-        inputFile.get(fileChar);
+        m_inputFile.get(fileChar);
     
-        endOfFile = inputFile.eof();
+        endOfFile = m_inputFile.eof();
         
         IncrementFileCounters(fileChar);
         
@@ -578,9 +604,9 @@ TOKEN RAT18S_Compiler::Lexer()
             
             do
             {
-                inputFile.get(fileChar);
+                m_inputFile.get(fileChar);
                 IncrementFileCounters(fileChar);
-                endOfFile = inputFile.eof();
+                endOfFile = m_inputFile.eof();
                 if (endOfFile)
                 {
                     // set the line/column number to what it was before we
@@ -597,7 +623,7 @@ TOKEN RAT18S_Compiler::Lexer()
             if (IsComment(fileChar) && !endOfFile)
             {
                 //get another character if not eof
-                inputFile.get(fileChar);
+                m_inputFile.get(fileChar);
                 IncrementFileCounters(fileChar);
             }
             
@@ -626,8 +652,8 @@ TOKEN RAT18S_Compiler::Lexer()
                     if (!IsWhiteSpace(fileChar) && GetCurrentState() != END_OPERATOR)
                     {
                         // push the file pointer back
-                        inputFile.unget();
-                        SetColmNum(--colmNum);    // decrease column number
+                        m_inputFile.unget();
+                        SetColmNum(GetColmNum()-1);    // decrease column number
                         RemoveLastCharLexeme();
                         
                         // found a = operator but had to truncate whatever was
@@ -652,7 +678,7 @@ TOKEN RAT18S_Compiler::Lexer()
                                      tokenFound = false;
             
         }
-        catch(const ERROR error)
+        catch(const Error error)
         {
             bool foundNewToken = false;
             
@@ -662,14 +688,20 @@ TOKEN RAT18S_Compiler::Lexer()
             {
                 if (IsWhiteSpace(fileChar))
                 {
-                    // append the space for correct colm numbers to be
-                    //  displayed
-                    AppendToLexeme(fileChar);
-                }
+		    // set the colm number back one to get front of 
+		    //  invalid symbol
+                    SetColmNum(GetColmNum()-1);
+		}
 
                 PrintError(error);
                 
                 RemoveLastCharLexeme();
+
+		if (IsWhiteSpace(fileChar))
+		{
+			// move column number where it should be
+			SetColmNum(GetColmNum()+1);
+		}
 
                 // reset the FSM state
                 SetCurrentState(INITIAL_STATE);
@@ -692,8 +724,8 @@ TOKEN RAT18S_Compiler::Lexer()
                       !endOfFile)
                 {
                     foundNewToken = true;   // we had to search for new token
-                    inputFile.get(fileChar);
-                    endOfFile = inputFile.eof();
+                    m_inputFile.get(fileChar);
+                    endOfFile = m_inputFile.eof();
                     
                     // append all characters associated with error
                     AppendToLexeme(fileChar);
@@ -717,7 +749,7 @@ TOKEN RAT18S_Compiler::Lexer()
                     //  state
                     if (!IsWhiteSpace(fileChar))
                     {   // if not whitespace then we need to store that token
-                        inputFile.unget();
+                        m_inputFile.unget();
                     }
                 }
                 else if (IsWhiteSpace(fileChar) && !foundNewToken)
@@ -735,7 +767,7 @@ TOKEN RAT18S_Compiler::Lexer()
                 else if (IsSeparator(fileChar))
                 {
                     RemoveLastCharLexeme();
-                    inputFile.unget();
+                    m_inputFile.unget();
                     SetColmNum(GetColmNum()-1);
                 }
                 
@@ -758,8 +790,9 @@ TOKEN RAT18S_Compiler::Lexer()
         
     } while (!tokenFound && !endOfFile);
     
-    return token;
+    return m_token;
 }
+
 
 
 //==============================================================================
@@ -774,9 +807,9 @@ TOKEN RAT18S_Compiler::Lexer()
 //           in an accepting state.
 //
 //==============================================================================
-bool RAT18S_Compiler::IsInAcceptingState()
+bool CLexer::IsInAcceptingState()
 {
-    switch(fsmState)
+    switch(m_fsmState)
     {
         case END_IDENTIFIER:
         case END_INTEGER:
@@ -800,6 +833,7 @@ bool RAT18S_Compiler::IsInAcceptingState()
 }
 
 
+
 //==============================================================================
 // Description: This function will determine if the char passed by argument is
 //        a legal comment character in the RAT18S language.
@@ -811,10 +845,11 @@ bool RAT18S_Compiler::IsInAcceptingState()
 //       false - curChar is an illegal comment char for RAT18S.
 //
 //==============================================================================
-bool RAT18S_Compiler::IsComment(const char curChar)
+bool CLexer::IsComment(const char curChar)
 {
     return curChar == '!';
 }
+
 
 
 //==============================================================================
@@ -828,7 +863,7 @@ bool RAT18S_Compiler::IsComment(const char curChar)
 //       false - curChar is an illegal beginning operator char for RAT18S.
 //
 //==============================================================================
-bool RAT18S_Compiler::IsOperator(const char curChar)
+bool CLexer::IsOperator(const char curChar)
 {
     for (int i = 0; i < OPERATOR_AMOUNT; i++)
     {
@@ -836,6 +871,7 @@ bool RAT18S_Compiler::IsOperator(const char curChar)
     }
     return false;
 }
+
 
 
 //==============================================================================
@@ -849,7 +885,7 @@ bool RAT18S_Compiler::IsOperator(const char curChar)
 //       false - curChar is an illegal separator character for RAT18S.
 //
 //==============================================================================
-bool RAT18S_Compiler::IsSeparator(const char curChar)
+bool CLexer::IsSeparator(const char curChar)
 {
     for (int i = 0; i < SEPARATOR_AMOUNT; i++)
     {
@@ -858,6 +894,7 @@ bool RAT18S_Compiler::IsSeparator(const char curChar)
     
     return false;
 }
+
 
 
 //==============================================================================
@@ -871,7 +908,7 @@ bool RAT18S_Compiler::IsSeparator(const char curChar)
 //       false - curChar is an illegal whitespace character for RAT18S.
 //
 //==============================================================================
-bool RAT18S_Compiler::IsWhiteSpace(const char curChar)
+bool CLexer::IsWhiteSpace(const char curChar)
 {
     for (int i = 0; i < WHITESPACE_AMOUNT; i++)
     {
@@ -881,26 +918,6 @@ bool RAT18S_Compiler::IsWhiteSpace(const char curChar)
     return false;
 }
 
-//==============================================================================
-// Description: This function will incremement the column number and line
-//              number if needed.
-//
-// Input:       curChar - the current character pulled from the input file.
-//
-// Output: NONE
-//
-//==============================================================================
-void RAT18S_Compiler::IncrementFileCounters(const char curChar)
-{
-    if (curChar == '\n' || curChar == '\0')
-    {
-        SetLineNum(GetLineNum()+1);
-    }
-    else
-    {
-        SetColmNum(GetColmNum()+1);
-    }
-}
 
 
 //==============================================================================
@@ -913,11 +930,12 @@ void RAT18S_Compiler::IncrementFileCounters(const char curChar)
 // Output: NONE
 //
 //==============================================================================
-void RAT18S_Compiler::PrintError(const ERROR errorType)
+void CLexer::PrintError(const Error errorType)
 {
     // gets the front of an error if its not a single character
     int colmOffset = 0;
-    (token.lexeme.length() > 1) ? colmOffset = token.lexeme.length()-1 : colmOffset = 0;
+    (m_token.GetLexemeLength() > 1) ? colmOffset = m_token.GetLexemeLength()-1 : 
+				      colmOffset = 0;
     std::cout << GetLineNum() << ":" << GetColmNum()-colmOffset << " RAT18S error: ";
     
     switch(errorType)
@@ -948,7 +966,6 @@ void RAT18S_Compiler::PrintError(const ERROR errorType)
             break;
     }
 }
-
 
 
 // ========================== Lexical Analysis End =============================

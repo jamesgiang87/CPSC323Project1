@@ -1,0 +1,9 @@
+// Date Created:
+// Author:
+// Class: CPSC 323 Compilers & Languages
+
+//*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
+// ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
+// BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN COMPILER (Ex Lexical Analysis, Syntax Analysis..)
+
+#include "CParser.h"

@@ -2,7 +2,7 @@ Boolean ElSe EnDiF FalsE Get If int put real return true while
 Hey did you know this is an identifier
 ! CANTREADTHISSENTENCE ! !!
 ;(){}[]%%,:
-++ -= += >= <= =< == < > <> = ^=
+++ -= += >= <= =< => == < > <> = ^= >>
 =+ =- =* =/ 
 
 num1:int

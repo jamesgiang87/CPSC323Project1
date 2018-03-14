@@ -5,10 +5,11 @@
 
 
 #include "RAT18S_Compiler.h"
+#include "CLexer.h"
 #include <iostream>
 #include <iomanip>
 
-void OutputToken(std::ofstream& outputFile, const TOKEN token);
+void OutputCToken(std::ofstream& outputFile, const CToken token);
 void PrintOutputHeader(std::ofstream& outputFile);
 
 int main(int argc, char* argv[])
@@ -48,20 +49,20 @@ int main(int argc, char* argv[])
     PrintOutputHeader(outputFile);   
         
     // stores the tokens returned from the lexer
-    TOKEN token;
+    CToken token;
     
     while(compiler.FileGood())
     {
         token = compiler.Lexer();
         
-        if (!token.lexeme.empty())
+        if (!token.IsLexemeEmpty())
         {
-            OutputToken(outputFile, token);
+            OutputCToken(outputFile, token);
         }
         
         // reset the token type and clear lexeme
-        token.tokenType = TYPE_ERROR;
-        token.lexeme.clear();
+        token.SetTokenType(TYPE_ERROR);
+        token.ClearLexeme();
     }
     
     // close the output file
@@ -84,9 +85,9 @@ void PrintOutputHeader(std::ofstream& outputFile)
 
 
 
-void OutputToken(std::ofstream& outputFile, const TOKEN token)
+void OutputCToken(std::ofstream& outputFile, const CToken token)
 {
-    switch(token.tokenType)
+    switch(token.GetTokenType())
     {
         case IDENTIFIER:
             outputFile << std::left << std::setw(strlen("identifier"));
@@ -129,7 +130,7 @@ void OutputToken(std::ofstream& outputFile, const TOKEN token)
             
     }
     
-    int extraSpacing = strlen("identifier") - token.lexeme.length();
-    outputFile << std::setw(25+extraSpacing) << " " << token.lexeme << "\n";
+    int extraSpacing = strlen("identifier") - token.GetLexemeLength();
+    outputFile << std::setw(25+extraSpacing) << " " << token.GetLexeme() << "\n";
 }
 
