@@ -16,6 +16,8 @@ class RAT18S_Compiler
 public:
 	CToken Lexer() { return m_lexer.Lexer(); }
 
+	void OutputToken(std::ofstream& outputFile);
+	
 	// INPUT FILE FUNCTIONS	
 	void OpenFile(char* fileName) {m_lexer.OpenFile(fileName);}
 	void OpenFile(std::string fileName) {m_lexer.OpenFile(fileName);}

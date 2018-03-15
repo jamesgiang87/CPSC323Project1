@@ -145,7 +145,8 @@ public:
 
 	State GetCurrentState() {return m_fsmState;}
 	std::string GetLexeme(){return m_token.GetLexeme();}
-	Token_Type GetToken() {return m_token.GetTokenType();}
+	int GetLexemeLength() {return m_token.GetLexemeLength();}
+	Token_Type GetTokenType() {return m_token.GetTokenType();}
 	void SetCurrentState(const State state) {m_fsmState = state;}
 	void SetToken(const Token_Type token_type) {m_token.SetTokenType(token_type);}
 	inline void RemoveLastCharLexeme() {m_token.RemoveLastCharLexeme();}
