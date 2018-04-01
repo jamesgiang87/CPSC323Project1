@@ -141,6 +141,15 @@ public:
     // *** COPY CONSTRUCTOR ADDED
     CLexer(const CToken& token) {m_token = token;}
     
+    CLexer& operator=(const CLexer& lhs) {
+        m_token = lhs.GetToken();
+        m_fsmState = lhs.GetCurrentState();
+       // m_inputFile = lhs.GetFile();
+        m_lineNum = lhs.GetLineNum();
+        m_colmNum = lhs.GetColmNum();
+        return *this;
+    }
+    
     // LEXER FSMs
     bool CheckIdentifier(const char curChar);
     bool CheckKeyword();
@@ -155,7 +164,7 @@ public:
     void CapitalizeChar(char& curChar);
     inline void ClearLexeme() {m_token.ClearLexeme();}
     
-    State GetCurrentState() {return m_fsmState;}
+    State GetCurrentState() const {return m_fsmState;}
     std::string GetLexeme() const {return m_token.GetLexeme();}
     long long GetLexemeLength() const {return m_token.GetLexemeLength();}
     // *** FUNCTION ADDED
@@ -187,10 +196,11 @@ public:
     inline bool FileGood() {return m_inputFile.good();}
     inline void OpenFile(char* fileName) {m_inputFile.open(fileName);}
     inline void OpenFile(std::string fileName) {m_inputFile.open(fileName);}
+    //inline std::ifstream GetFile() const {return m_inputFile;}
     
     // LINE/COLUMN COUNTING FUNCTIONS
-    long long int GetColmNum() {return m_colmNum;}
-    long long int GetLineNum() {return m_lineNum;}
+    long long int GetColmNum() const {return m_colmNum;}
+    long long int GetLineNum() const {return m_lineNum;}
     void SetColmNum(const long long int newColmNum)
     {m_colmNum = newColmNum; if (m_colmNum <= 0){m_colmNum = 1;}}
     void SetLineNum(const long long int newLineNum)

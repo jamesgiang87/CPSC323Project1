@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     RAT18S_Compiler compiler;
 
     // stores the output file
-    std::ofstream outputFile;
+//    std::ofstream outputFile;
     
     // check if input file given via cmd line (0 = filename, 1 = input file)
     if (argc == 2)
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     }
     
     // create output file to store output to
-    outputFile.open("LexerAnalysis.txt");
+//    outputFile.open("LexerAnalysis.txt");
     
 // *** NEED TO DELETE IN FINAL VERSION ASSIGNMENT 2    testFunction(compiler);
     
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
     std::cout << std::endl;
     
     // close the output file
-    outputFile.close();
+//    outputFile.close();
     
     // close the input file
     compiler.CloseFile();

@@ -2,10 +2,9 @@
 
 %%
 real area, radius;
-area = 3.14159 * radius * radius;
 
 ! recieve the radius from the user !
 get(radius);
 
-real area = 3.14159 * radius * radius;
+area = 3.14159 * radius * radius;
 put(area);
