@@ -1,7 +1,10 @@
 ! This program will computer the area of a circle !
 
+%%
+real area, radius;
+area = 3.14159 * radius * radius;
+
 ! recieve the radius from the user !
-real radius;
 get(radius);
 
 real area = 3.14159 * radius * radius;

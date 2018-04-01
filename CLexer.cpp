@@ -11,7 +11,80 @@
 #include <iostream>
 #include "CLexer.h"
 
-// ========================= Lexical Analysis Start ============================
+// ============================= CToken  Start =================================
+//==============================================================================
+// Description: This function will print out the token type to the screen.
+//
+// Input: NONE
+//
+// Output: NONE
+//
+//==============================================================================
+void CToken::PrintTokenType() const
+{
+    switch(m_tokenType)
+    {
+        case IDENTIFIER:
+            std::cout <<  "identifier";
+            break;
+            
+        case KEYWORD:
+            std::cout << "keyword";
+            break;
+        case INT:
+            std::cout << "int";
+            break;
+            
+        case REAL:
+            std::cout << "real";
+            break;
+            
+        case OPERATOR:
+            std::cout << "operator";
+            break;
+            
+        case SEPARATOR:
+            std::cout << "separator";
+            break;
+            
+        case SYMBOL:
+            std::cout << "symbol";
+            break;
+            
+        default:
+            std::cout << "unknown";
+            break;
+    }
+}
+
+
+
+// ============================= CLexer  Start =================================
+//==============================================================================
+// Description: This function will return the front of a tokens place in the
+//              input file.
+//
+// Input: NONE
+//
+// Output: NONE
+//
+//==============================================================================
+long long CLexer::CalcErrorOffset()
+{
+    long long colmOffset = 0;
+    
+    if (m_token.GetLexemeLength() > 1)
+    {
+        colmOffset = m_token.GetLexemeLength()-1;
+    }
+    else
+    {
+        colmOffset = 0;
+    }
+    
+    return colmOffset;
+}
+
 
 //==============================================================================
 // Description: This function will capitalize a character if lowercase letter.
@@ -51,7 +124,7 @@ bool CLexer::CheckIdentifier(const char curChar)
     State curState = GetCurrentState();
     
     if (std::isalpha(curChar) && (curState == INITIAL_STATE
-        || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
+                                  || curState == INSIDE_IDENTIFIER || curState == COULD_END_IDENTIFIER))
     {
         // identifiers must lead with a letter or end with a
         // letter with the exception of ending with a $
@@ -113,7 +186,7 @@ bool CLexer::CheckKeyword()
         if (lexeme == KEYWORDS[curIndex])
         {
             SetCurrentState(END_KEYWORD);
-            SetToken(KEYWORD);
+            SetTokenType(KEYWORD);
             return true;
         }
         else if (lexeme < KEYWORDS[curIndex])
@@ -209,7 +282,7 @@ bool CLexer::CheckOperators(const char curChar)
             if (curState == INITIAL_STATE)
             {
                 SetCurrentState(END_OPERATOR);
-                SetToken(OPERATOR);
+                SetTokenType(OPERATOR);
                 return true;
             }
             else
@@ -238,11 +311,11 @@ bool CLexer::CheckOperators(const char curChar)
             
         case '>':
         case '<':
-            // < operator is valid and so is =< or => 
+            // < operator is valid and so is =< or =>
             if (curState == INITIAL_STATE || curState == EQUAL_OPERATOR)
             {
                 SetCurrentState(END_OPERATOR);
-                SetToken(OPERATOR);
+                SetTokenType(OPERATOR);
                 return true;
             }
             else
@@ -263,7 +336,7 @@ bool CLexer::CheckOperators(const char curChar)
             {
                 // found the ^= operator
                 SetCurrentState(END_OPERATOR);
-                SetToken(OPERATOR);
+                SetTokenType(OPERATOR);
                 return true;
             }
             else
@@ -312,15 +385,15 @@ bool CLexer::CheckSeparators(const char curChar)
             // dont care for matching () {} just care that we notice its a
             //  separator
             SetCurrentState(END_SEPARATOR);
-            SetToken(SEPARATOR);
+            SetTokenType(SEPARATOR);
             return true;
         }
     }
-      else if (curChar == '%' && curState == PERCENT_SEPARATOR)
+    else if (curChar == '%' && curState == PERCENT_SEPARATOR)
     {
         // found the closing part of a separator character
         SetCurrentState(END_SEPARATOR);
-        SetToken(SEPARATOR);
+        SetTokenType(SEPARATOR);
         return true;
     }
     
@@ -340,7 +413,7 @@ bool CLexer::CheckSeparators(const char curChar)
 //           occured.
 //
 //==============================================================================
-Error CLexer::DetermineError()
+Error_CLexer CLexer::DetermineError()
 {
     switch(GetCurrentState())
     {
@@ -362,14 +435,14 @@ Error CLexer::DetermineError()
         case POTENTIAL_OPERATOR:
         case EQUAL_OPERATOR:
             return INVALID_OPERATOR;
-        
+            
             // ERROR CASE FOR SYMBOLS
         default:
             return INVALID_SYMBOL;
     }
     
     // ERROR CASES FOR THOSE YOU CANT THINK OF
-    return UNKNOWN_ERROR;
+    return CLEXER_UNKNOWN_ERROR;
 }
 
 
@@ -404,7 +477,7 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 // we have just found out that it is an
                 //  identifier so label as accepted
                 SetCurrentState(END_IDENTIFIER);
-                SetToken(IDENTIFIER);
+                SetTokenType(IDENTIFIER);
                 return true;
                 break;
                 
@@ -413,7 +486,7 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 // we have just found out that its is not a
                 //  number anymore so we label it as accepted
                 SetCurrentState(END_INTEGER);
-                SetToken(INT);
+                SetTokenType(INT);
                 return true;
                 break;
                 
@@ -421,20 +494,20 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 // we just found out that it is a real number
                 //  so we label it as an accepting state
                 SetCurrentState(END_REAL);
-                SetToken(REAL);
+                SetTokenType(REAL);
                 return true;
                 break;
                 
                 // cases for OPERATORS
                 // not all operators need to be here
-             
+                
             case POTENTIAL_OPERATOR:
                 // we have just found a > and IT MUST BE A SPACE
                 // or we found >= need to throw error for <=
                 if (IsWhiteSpace(curChar) || curChar == '=')
                 {
                     SetCurrentState(END_OPERATOR);
-                    SetToken(OPERATOR);
+                    SetTokenType(OPERATOR);
                     return true;
                 }
                 else if (IsSeparator(curChar) || IsComment(curChar))
@@ -454,11 +527,11 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 
                 // we have just found =, =<
                 // if it is =' ' or == then legal operator
-                if (IsWhiteSpace(curChar) || curChar == '=' 
-		    || curChar == '<' || curChar == '>')
+                if (IsWhiteSpace(curChar) || curChar == '='
+                    || curChar == '<' || curChar == '>')
                 {
                     SetCurrentState(END_OPERATOR);
-                    SetToken(OPERATOR);
+                    SetTokenType(OPERATOR);
                     return true;
                     
                 }
@@ -467,7 +540,7 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                     // we have to truncate token such as => into = and >
                     return true;
                 }
-
+                
                 
                 break;
                 
@@ -524,15 +597,16 @@ void CLexer::FSM(const char curChar)
     else
     {
         // check if invalid symbol found on end of a token
-        Error error = DetermineError();
+        Error_CLexer error = DetermineError();
         
-        if (error == INVALID_IDENTIFIER && curState == COULD_END_IDENTIFIER)
+        if ((error == INVALID_IDENTIFIER && curState == COULD_END_IDENTIFIER)
+            || isalpha(curChar))
         {
             // remove the invalid symbol after the identifier
             RemoveLastCharLexeme();
             // we have found a identifier token
             SetCurrentState(END_IDENTIFIER);
-            SetToken(IDENTIFIER);
+            SetTokenType(IDENTIFIER);
             // move the file pointer pointing back at the invalid symbol
             m_inputFile.unget();
         }
@@ -577,7 +651,7 @@ void CLexer::IncrementFileCounters(const char curChar)
 //==============================================================================
 CToken CLexer::Lexer()
 {
-    SetToken(TYPE_ERROR);       // make sure there is not old token type
+    SetTokenType(TYPE_ERROR);       // make sure there is not old token type
     ClearLexeme();            // make sure there are no old lexemes
     bool tokenFound = false;    // if token is found set true
     char fileChar;            // stores the chars extracted from file
@@ -588,7 +662,7 @@ CToken CLexer::Lexer()
     {
         // retrieve a character from the file white fileChar is not whitespace
         m_inputFile.get(fileChar);
-    
+        
         endOfFile = m_inputFile.eof();
         
         IncrementFileCounters(fileChar);
@@ -662,7 +736,7 @@ CToken CLexer::Lexer()
                             GetCurrentState() == POTENTIAL_OPERATOR)
                         {
                             SetCurrentState(END_OPERATOR);
-                            SetToken(OPERATOR);
+                            SetTokenType(OPERATOR);
                         }
                     }
                 }
@@ -675,10 +749,10 @@ CToken CLexer::Lexer()
             
             // check if the current state is in an acceptingState
             (IsInAcceptingState()) ? tokenFound = true :
-                                     tokenFound = false;
+            tokenFound = false;
             
         }
-        catch(const Error error)
+        catch(const Error_CLexer error)
         {
             bool foundNewToken = false;
             
@@ -688,21 +762,21 @@ CToken CLexer::Lexer()
             {
                 if (IsWhiteSpace(fileChar))
                 {
-		    // set the colm number back one to get front of 
-		    //  invalid symbol
+                    // set the colm number back one to get front of
+                    //  invalid symbol
                     SetColmNum(GetColmNum()-1);
-		}
-
+                }
+                
                 PrintError(error);
                 
                 RemoveLastCharLexeme();
-
-		if (IsWhiteSpace(fileChar))
-		{
-			// move column number where it should be
-			SetColmNum(GetColmNum()+1);
-		}
-
+                
+                if (IsWhiteSpace(fileChar))
+                {
+                    // move column number where it should be
+                    SetColmNum(GetColmNum()+1);
+                }
+                
                 // reset the FSM state
                 SetCurrentState(INITIAL_STATE);
                 
@@ -717,7 +791,7 @@ CToken CLexer::Lexer()
             //  same error and then try to find the next token
             else
             {
-            
+                
                 // while we have found an error we need to find next token
                 while(!IsWhiteSpace(fileChar) && !IsOperator(fileChar) &&
                       !IsSeparator(fileChar) && !IsComment(fileChar) &&
@@ -743,8 +817,8 @@ CToken CLexer::Lexer()
                 if (foundNewToken)
                 {
                     RemoveLastCharLexeme();
-                
-                
+                    
+                    
                     // we found our next token so put it back and reset the FSM
                     //  state
                     if (!IsWhiteSpace(fileChar))
@@ -757,11 +831,11 @@ CToken CLexer::Lexer()
                     // if we encountered an error but its a single character
                     if (fileChar == '\n' || fileChar == '\0')
                     {
-                            SetLineNum(GetLineNum()-1);
+                        SetLineNum(GetLineNum()-1);
                     }
                     else
                     {
-                            SetColmNum(GetColmNum()-1);
+                        SetColmNum(GetColmNum()-1);
                     }
                 }
                 else if (IsSeparator(fileChar))
@@ -773,7 +847,7 @@ CToken CLexer::Lexer()
                 
                 // print the error to the user
                 PrintError(error);
-            
+                
                 if (IsWhiteSpace(fileChar))
                 {
                     // if we encounter whitespace/newlines incrememnt file
@@ -817,14 +891,14 @@ bool CLexer::IsInAcceptingState()
         case END_KEYWORD:
         case END_OPERATOR:
         case END_SEPARATOR:
-//        case END_COMMENT:
+            //        case END_COMMENT:
             SetCurrentState(INITIAL_STATE);    // reset the FSM
             return true;    // an accepting state
             
             // special cases where the FSM is not reset
-//        case INSIDE_COMMENT:
-//            return true;
-        
+            //        case INSIDE_COMMENT:
+            //            return true;
+            
         default:
             return false;    // not an accepting state
     }
@@ -849,7 +923,6 @@ bool CLexer::IsComment(const char curChar)
 {
     return curChar == '!';
 }
-
 
 
 //==============================================================================
@@ -930,44 +1003,58 @@ bool CLexer::IsWhiteSpace(const char curChar)
 // Output: NONE
 //
 //==============================================================================
-void CLexer::PrintError(const Error errorType)
+void CLexer::PrintError(const Error_CLexer errorType)
 {
+    std::cout << std::endl;
+    
     // gets the front of an error if its not a single character
-    int colmOffset = 0;
-    (m_token.GetLexemeLength() > 1) ? colmOffset = m_token.GetLexemeLength()-1 : 
-				      colmOffset = 0;
-    std::cout << GetLineNum() << ":" << GetColmNum()-colmOffset << " RAT18S error: ";
+    long long colmOffset = CalcErrorOffset();
+    std::cout << GetLineNum() << ":" << GetColmNum()-colmOffset
+              << " RAT18S error:";
     
     switch(errorType)
     {
         case INVALID_IDENTIFIER:
-            std::cout << " invalid identifier \"" << GetLexeme() << "\"" << std::endl;
+            std::cout << " invalid identifier \"" << GetLexeme() << "\""
+                      << std::endl;
+            throw INVALID_IDENTIFIER;
             break;
             
         case INVALID_INTEGER:
-            std::cout << " invalid integer \"" << GetLexeme() << "\"" << std::endl;
+            std::cout << " invalid integer \"" << GetLexeme() << "\""
+                      << std::endl;
+            throw INVALID_INTEGER;
             break;
             
         case INVALID_REAL:
             std::cout << " invalid real \"" << GetLexeme() << "\"" << std::endl;
+            throw INVALID_REAL;
             break;
             
         case INVALID_OPERATOR:
-            std::cout << " invalid operator \"" << GetLexeme() << "\"" << std::endl;
+            std::cout << " invalid operator \"" << GetLexeme() << "\""
+                      << std::endl;
+            throw INVALID_OPERATOR;
             break;
             
         case INVALID_SYMBOL:
-            std::cout << " invalid symbol \"" << GetLexeme() << "\"" << std::endl;
+            std::cout << " invalid symbol \"" << GetLexeme() << "\""
+                      << std::endl;
+            throw INVALID_SYMBOL;
             break;
             
         default:
             // unknown error
-            std::cout << " unknown error occured \"" << GetLexeme() << "\"" << std::endl;
+            std::cout << " unknown error occured \"" << GetLexeme() << "\""
+                      << std::endl;
+            throw CLEXER_UNKNOWN_ERROR;
             break;
     }
 }
 
 
 // ========================== Lexical Analysis End =============================
+
+
 
 

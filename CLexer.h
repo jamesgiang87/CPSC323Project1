@@ -40,12 +40,12 @@ enum State
     DOLLAR_IDENTIFIER,    // only last character can be $ if its found
     END_IDENTIFIER,       // AN ACCEPTING STATE IDENTIFIERS
     
-    //STATE FOR INTEGER 
+    //STATE FOR INTEGER
     INSIDE_INTEGER,     // a digit is found and current state is initial
-    END_INTEGER,       	// AN ACCEPTING STATE FOR INTEGERS
+    END_INTEGER,           // AN ACCEPTING STATE FOR INTEGERS
     INSIDE_REAL,        // when a '.' is found after a digit is
     COULD_END_REAL,     // when a digit is found after a '.'
-    END_REAL,        	// AN ACCEPTING STATE FOR REALS
+    END_REAL,            // AN ACCEPTING STATE FOR REALS
     
     //STATE FOR KEYWORDS
     END_KEYWORD,        // AN ACCEPTING STATE FOR KEYWORDS
@@ -64,10 +64,11 @@ enum State
 
 
 // stores every error flag that may occur in our FSM (Finite State Machine)
-enum Error
+// *** ADDED Error_CLexer from Error
+enum Error_CLexer
 {
     //ERROR FOR ERRORS HAHA
-    UNKNOWN_ERROR,
+    CLEXER_UNKNOWN_ERROR,
     
     //ERRORS FOR IDENTIFIERS
     INVALID_IDENTIFIER,    // Ex a8, a$2
@@ -101,94 +102,116 @@ enum Token_Type
 class CToken
 {
 public:
-	CToken(): m_tokenType(TYPE_ERROR), m_lexeme("") {};
-	
-	// HELPER FUNCTIONS
-	void AppendToLexeme(const char curChar) {m_lexeme += curChar;}
-	inline void ClearLexeme() {m_lexeme.clear();}
-	Token_Type GetTokenType() const {return m_tokenType;}
-	std::string GetLexeme() const {return m_lexeme;}
-	int GetLexemeLength() const {return m_lexeme.length();}
-	bool IsLexemeEmpty() {return m_lexeme.empty();}
-	void SetTokenType(const Token_Type tokenType) {m_tokenType = tokenType;}
-	inline void RemoveLastCharLexeme() {m_lexeme.pop_back();}
+    CToken(): m_tokenType(TYPE_ERROR), m_lexeme("") {};
+    
+    // HELPER FUNCTIONS
+    void AppendToLexeme(const char curChar) {m_lexeme += curChar;}
+    inline void ClearLexeme() {m_lexeme.clear();}
+    Token_Type GetTokenType() const {return m_tokenType;}
+    std::string GetLexeme() const {return m_lexeme;}
+    long long GetLexemeLength() const {return m_lexeme.length();}
+    bool IsLexemeEmpty() {return m_lexeme.empty();}
+    // *** FUNCTION ADDED
+    CToken& operator=(const CToken& lhs) {m_tokenType = lhs.GetTokenType();
+                                      m_lexeme = lhs.GetLexeme(); return *this; }
+    // *** ADDED FUNCTION
+    void PrintTokenType() const;
+    // *** ADDED FUNCTION
+    void SetToken(const CToken token) {m_tokenType = token.GetTokenType();
+                                       m_lexeme = token.GetLexeme();}
+    void SetTokenType(const Token_Type tokenType) {m_tokenType = tokenType;}
+    inline void RemoveLastCharLexeme() {m_lexeme.pop_back();}
+    
 private:
-	// store the type of token was found (ex. Real, Int, Separator)
-    	Token_Type m_tokenType; 
- 
-    	// store the actual instance of the token
-    	std::string m_lexeme;    
+    // store the type of token was found (ex. Real, Int, Separator)
+    Token_Type m_tokenType;
+    
+    // store the actual instance of the token
+    std::string m_lexeme;
 };
 
 
 
 class CLexer
 {
-
+    
 public:
-	CLexer(): m_fsmState(INITIAL_STATE), m_lineNum(1), m_colmNum(0) {};
-	CToken Lexer();
- 	
-	// LEXER FSMs
-	bool CheckIdentifier(const char curChar);
-	bool CheckKeyword();
-	bool CheckNumber(const char curChar);
-	bool CheckOperators(const char curChar);
-	bool CheckSeparators(const char curChar);
-	bool EndOfToken(const char curChar, const bool endFile);
-	void FSM(const char curChar);
-
-	// LEXER HELPER FUNCTIONS
-	void AppendToLexeme(const char curChar) {m_token.AppendToLexeme(curChar);}
-	void CapitalizeChar(char& curChar);
-	inline void ClearLexeme() {m_token.ClearLexeme();}
-
-	State GetCurrentState() {return m_fsmState;}
-	std::string GetLexeme(){return m_token.GetLexeme();}
-	int GetLexemeLength() {return m_token.GetLexemeLength();}
-	Token_Type GetTokenType() {return m_token.GetTokenType();}
-	void SetCurrentState(const State state) {m_fsmState = state;}
-	void SetToken(const Token_Type token_type) {m_token.SetTokenType(token_type);}
-	inline void RemoveLastCharLexeme() {m_token.RemoveLastCharLexeme();}
-	bool IsInAcceptingState();
-	bool IsComment(const char curChar);
-	bool IsOperator(const char curChar);
-	bool IsSeparator(const char curChar);
-	bool IsWhiteSpace(const char curChar);
-
-	// ERROR FUNCTIONS
-	Error DetermineError();
-	void PrintError(const Error errorType);
-
-	// FILE FUNCTIONS
-	inline void OpenFile(char* fileName) {m_inputFile.open(fileName);}
-	inline void OpenFile(std::string fileName) {m_inputFile.open(fileName);}
-	inline bool FileFail() {return m_inputFile.fail();}
-	inline bool FileGood() {return m_inputFile.good();}
-	inline void CloseFile() {m_inputFile.close();}
-
-	// LINE/COLUMN COUNTING FUNCTIONS
-	long long int GetColmNum() {return m_colmNum;}
-	long long int GetLineNum() {return m_lineNum;}
-	void SetColmNum(const long long int newColmNum) 
-	{m_colmNum = newColmNum; if (m_colmNum <= 0){m_colmNum = 1;}}
-	void SetLineNum(const long long int newLineNum) 
-	{m_lineNum = newLineNum; 
-	 if (m_lineNum <= 0) {m_lineNum = 1;} 
-	 m_colmNum = 0;}
-	void IncrementFileCounters(const char curChar);
-
+    CLexer(): m_fsmState(INITIAL_STATE), m_lineNum(1), m_colmNum(0) {};
+    CToken Lexer();
+    // *** COPY CONSTRUCTOR ADDED
+    CLexer(const CToken& token) {m_token = token;}
+    
+    // LEXER FSMs
+    bool CheckIdentifier(const char curChar);
+    bool CheckKeyword();
+    bool CheckNumber(const char curChar);
+    bool CheckOperators(const char curChar);
+    bool CheckSeparators(const char curChar);
+    bool EndOfToken(const char curChar, const bool endFile);
+    void FSM(const char curChar);
+    
+    // LEXER HELPER FUNCTIONS
+    void AppendToLexeme(const char curChar) {m_token.AppendToLexeme(curChar);}
+    void CapitalizeChar(char& curChar);
+    inline void ClearLexeme() {m_token.ClearLexeme();}
+    
+    State GetCurrentState() {return m_fsmState;}
+    std::string GetLexeme() const {return m_token.GetLexeme();}
+    long long GetLexemeLength() const {return m_token.GetLexemeLength();}
+    // *** FUNCTION ADDED
+    CToken GetToken() const {return m_token;}
+    Token_Type GetTokenType() const {return m_token.GetTokenType();}
+    // *** FUNCTION ADDED
+    void PrintTokenType() const {m_token.PrintTokenType();}
+    void SetCurrentState(const State state) {m_fsmState = state;}
+    void SetTokenType(const Token_Type token_type) {m_token.SetTokenType(token_type);}
+    // *** FUNCTION ADDED
+    void SetToken(const CToken& token) {m_token = token;}
+    inline void RemoveLastCharLexeme() {m_token.RemoveLastCharLexeme();}
+    bool IsInAcceptingState();
+    bool IsComment(const char curChar);
+    bool IsOfTypeOperator();
+    bool IsOperator(const char curChar);
+    bool IsSeparator(const char curChar);
+    bool IsWhiteSpace(const char curChar);
+    
+    // ERROR FUNCTIONS
+    Error_CLexer DetermineError();
+    long long CalcErrorOffset();
+    void PrintError(const Error_CLexer errorType);
+    
+    // FILE FUNCTIONS
+    inline void CloseFile() {m_inputFile.close();}
+    inline bool Eof() {return m_inputFile.eof();}
+    inline bool FileFail() {return m_inputFile.fail();}
+    inline bool FileGood() {return m_inputFile.good();}
+    inline void OpenFile(char* fileName) {m_inputFile.open(fileName);}
+    inline void OpenFile(std::string fileName) {m_inputFile.open(fileName);}
+    
+    // LINE/COLUMN COUNTING FUNCTIONS
+    long long int GetColmNum() {return m_colmNum;}
+    long long int GetLineNum() {return m_lineNum;}
+    void SetColmNum(const long long int newColmNum)
+    {m_colmNum = newColmNum; if (m_colmNum <= 0){m_colmNum = 1;}}
+    void SetLineNum(const long long int newLineNum)
+    {m_lineNum = newLineNum;
+        if (m_lineNum <= 0) {m_lineNum = 1;}
+        m_colmNum = 0;}
+    void IncrementFileCounters(const char curChar);
+    
 private:
-	CToken m_token;       // stores the current token
-    	State m_fsmState;     // stores the current state of the FSM
-
-    	// FILE DATA MEMBERS
-    	std::ifstream m_inputFile;
- 
-        long long int m_lineNum;    // stores the line number for the inputfile
-        long long int m_colmNum;    // stores the column number for the inputfile
-
+    CToken m_token;       // stores the current token
+    State m_fsmState;     // stores the current state of the FSM
+    
+    // FILE DATA MEMBERS
+    std::ifstream m_inputFile;
+    
+    long long int m_lineNum;    // stores the line number for the inputfile
+    long long int m_colmNum;    // stores the column number for the inputfile
+    
 };
 
-#endif    // END OF CLexer_HEADER 
+#endif    // END OF CLexer_HEADER
+
+
 

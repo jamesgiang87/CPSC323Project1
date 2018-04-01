@@ -1,12 +1,21 @@
-Boolean ElSe EnDiF FalsE Get If int put real return true while
-Hey did you know this is an identifier
-! CANTREADTHISSENTENCE ! !!
-;(){}[]%%,:
-++ -= += >= <= =< => == < > <> = ^= >>
-=+ =- =* =/ 
+! This program will computer the area of a circle !
 
-num1:int
-while (fahr < upper) a = 23.00
+%%
+real area, radius;
+area = 3.14159 * radius * radius;
 
-% @ # ^ c$4 c$4$ "
+! recieve the radius from the user !
+get(radius);
+
+if (radius == 2) 
+{
+    radius = 5; 
+}
+else
+{
+    radius = 7;
+}
+endif /
+
+put(area);
 

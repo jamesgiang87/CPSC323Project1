@@ -1,32 +1,39 @@
 ! This program will compute the factorial of a desired number !
 
-function factorial(number:int)
+function factorial [number:int]
 {
-	if (number == 1)
-	{
-		return 1;
-	}
-	else
-	{
-		return number * factorial(number-1);
-	}
+    if (number == 1)
+    {
+        return 1;
+    }
+    else 
+    {
+        !return number * factorial(number-1);!
+        number = number-1;
+        return number * factorial(number);
+    }
+    endif
 }
 
 %%
 
 ! Get the factorial that the user wants to compute !
-int factorialNum = 0;
-bool continueLoop = true;
+int factorialNum, continueLoop;
+factorialNum = 0;
+continueLoop = true;
 
-while (continueLoop)
+while (continueLoop == true)
 {
-	get(factorialNum);
+    get(factorialNum);
 
-	if (factorialNum >= 1)
-	{
-		continueLoop = false;
-	}
+    if (factorialNum => 1)
+    {
+        continueLoop = false;
+    }
+    endif
 }
 
 ! compute the factorial !
 put(factorial(factorialNum));
+
+
