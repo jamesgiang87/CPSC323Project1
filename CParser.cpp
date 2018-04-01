@@ -227,14 +227,11 @@ bool CParser::ParameterListPrime(CLexer& token)
         PrintRule("\t<Parameter List Prime> -> , <Parameter List>", token);
         return ParameterList(token);
     }
-    else if (Empty(token))
-    {
-        SetTokenNeeded(false);
-        PrintRule("\t<Parameter List Prime> -> <Empty>\n", token);
-        return true;
-    }
-
-    return false;
+    
+    SetTokenNeeded(false);
+    PrintRule("\t<Parameter List Prime> -> <Empty>\n", token);
+    Empty(token);
+    return true;
 }
 
 
@@ -411,12 +408,9 @@ bool CParser::DeclarationListPrime(CLexer& token)
     {
         return true;
     }
-    else if (Empty(token))
-    {
-        return true;
-    }
     
-    return false;
+    Empty(token);
+    return true;
 }
 
 
@@ -465,16 +459,14 @@ bool CParser::IDsPrime(CLexer& token)
     if ("," == token.GetLexeme())
     {
         SetTokenNeeded(true);
-        PrintRule("\t<IDs Prime> -> , <IDs> | <Empty>\n", token);
+        PrintRule("\t<IDs Prime> -> , <IDs>\n", token);
         return IDs(token);
     }
-    else if (Empty(token))
-    {
-        SetTokenNeeded(false);
-        return true;
-    }
     
-    return false;
+    SetTokenNeeded(false);
+    PrintRule("\t<IDs Prime> -> <Empty>\n", token);
+    Empty(token);
+    return true;
 }
 
 
@@ -502,13 +494,10 @@ bool CParser::StatementListPrime(CLexer& token)
     {
         return true;
     }
-    else if (Empty(token))
-    {
-        SetTokenNeeded(false);
-        return true;
-    }
     
-    return false;
+    SetTokenNeeded(false);
+    Empty(token);
+    return true;
 }
 
 
@@ -1041,14 +1030,12 @@ bool CParser::ExpressionPrime(CLexer& token)
             return true;
         }
     }
-    else if (Empty(token))
-    {
-        SetTokenNeeded(false);
-        PrintRule("\t<Expression Prime> -> <Empty>\n", token);
-        return true;
-    }
     
-    return false;
+    SetTokenNeeded(false);
+    PrintRule("\t<Expression Prime> -> <Empty>\n", token);
+    Empty(token);
+    return true;
+
 }
 
 
@@ -1085,14 +1072,11 @@ bool CParser::TermPrime(CLexer& token)
         TermPrime(token);
         return true;
     }
-    else if (Empty(token))
-    {
-        SetTokenNeeded(false);
-        PrintRule("\t<Term Prime> -> <Empty>\n", token);
-        return true;
-    }
     
-    return false;
+    SetTokenNeeded(false);
+    PrintRule("\t<Term Prime> -> <Empty>\n", token);
+    Empty(token);
+    return true;
 }
 
 
@@ -1218,14 +1202,11 @@ bool CParser::IdentifierPrime(CLexer& token)
             throw GetErrorType();
         }
     }
-    else if (Empty(token))
-    {
-        SetTokenNeeded(false);
-        PrintRule("\t<Identifier Prime> -> <Empty>\n", token);
-        return true;
-    }
     
-    return false;    // return true for epsilon
+    PrintRule("\t<Identifier Prime> -> <Empty>\n", token);
+    Empty(token);
+    SetTokenNeeded(false);
+    return true;
 }
 
 
