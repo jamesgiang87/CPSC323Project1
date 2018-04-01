@@ -15,6 +15,8 @@
 // *** HOW ARE YOU TO SEPARATE IDENTIFIER FROM KEYWORDS LIKE REPLACING THE WORD WHILE WITH FIX WITH
 //     SAME SYNTAX... IT WOULD STILL WORK (IM GUESSING WE NEED THE NAME TABLE BUT PROBABLY NOT A FOCUS)
 //     FOR THIS CLASS
+// *** HOW DO WE: identify that a qualifer in the declaration list say we did a variable named
+//                num1 boolean isTrue;   it would work when it should be int num1; boolean isTrue;
 // *** NEED TO FIX???: return number * factorial(number-1); needs to be factorial((number-1)) or is the first suppose to be correct?
 //                     the error is thrown in IDs prime expecting a ) but that is meant for the outside.... 
 // *** ???NEED TO FIX: function() needs to return error for EXPECTED_KEYWORD
@@ -23,20 +25,19 @@
 // *** ???NEED TO FIX: Statement(CLexer& token) to return unique error for EXPECTED_STATEMENT ??
 // ***       NEED TO FIX: StatementList(CLexer& token) to handle unique error from Statement
 
-#include "CParser.h"
-#include "CLexer.h"
+#include "CParser.hpp"
+#include "CLexer.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <iomanip>
 
 bool CParser::Rat18S(CLexer& token)
 {
-    GetToken(token);
-    SetTokenNeeded(false);
     PrintRule("\t<Rat18S> -> <Opt Function Definitions> %%", token);
     PrintRule(" <Opt Declaration List> <Statement List>\n", token);
-    
-    // *** NOT COMPLETE NOT SURE ABOUT ERRORS
+ 
+    GetToken(token);
+    SetTokenNeeded(false);
     OptFunctionDefinitions(token);
     
     GetToken(token);
@@ -86,6 +87,7 @@ bool CParser::OptFunctionDefinitions(CLexer& token)
 
 bool CParser::FunctionDefinitions(CLexer& token)
 {   // *** NOT SURE WHAT TO RETURN AS IN BOOL
+    
     PrintRule("\t<Function Definitions> -> <Function>", token);
     PrintRule(" <Function Definition Prime>\n", token);
     try
@@ -123,10 +125,6 @@ bool CParser::FunctionDefinitionsPrime(CLexer& token)
 
 bool CParser::Function(CLexer& token)
 {
-    // *** NOT ENTIRELY SURE THIS IS CORRECT
-    PrintRule("\t<Function> -> function <Identifier> [", token);
-    PrintRule(" <Opt Parameter List> ] <Opt Declaration List> <Body>\n", token);
-    
     GetToken(token);
     if ("FUNCTION" == token.GetLexeme())
     {
@@ -138,6 +136,8 @@ bool CParser::Function(CLexer& token)
             GetToken(token);
             if ("[" == token.GetLexeme())
             {
+                PrintRule("\t<Function> -> function <Identifier> [", token);
+                PrintRule(" <Opt Parameter List> ] <Opt Declaration List> <Body>\n", token);
                 OptParameterList(token);
 
                 GetToken(token);
@@ -219,18 +219,18 @@ bool CParser::ParameterList(CLexer& token)
 bool CParser::ParameterListPrime(CLexer& token)
 {
     // *** NOT SURE IF THIS IS CORRECT
-    PrintRule("\t<Parameter List Prime> -> , <Parameter List>", token);
-    PrintRule(" | <Empty>\n", token);
     
     GetToken(token);
     if ("," == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<Parameter List Prime> -> , <Parameter List>", token);
         return ParameterList(token);
     }
     else if (Empty(token))
     {
         SetTokenNeeded(false);
+        PrintRule("\t<Parameter List Prime> -> <Empty>\n", token);
         return true;
     }
 
@@ -273,15 +273,23 @@ bool CParser::Parameter(CLexer& token)
 
 bool CParser::Qualifier(CLexer& token)
 {
-    // *** NOT SURE IF THIS IS CORRECT
-    PrintRule("\t<Qualifier> -> int | boolean | real\n", token);
-    
     GetToken(token);
-    if ("INT"     == token.GetLexeme() ||
-        "BOOLEAN" == token.GetLexeme() ||
-        "REAL"    == token.GetLexeme())
+    if ("INT"     == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<Qualifier> -> int\n", token);
+        return true;
+    }
+    else if ("BOOLEAN" == token.GetLexeme())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Qualifier> -> boolean\n", token);
+        return true;
+    }
+    else if ("REAL"    == token.GetLexeme())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Qualifier> -> real\n", token);
         return true;
     }
     else
@@ -292,11 +300,6 @@ bool CParser::Qualifier(CLexer& token)
             throw GetErrorType();
         }
     }
-//        else
-//        {
-//            SetError(EXPECTED_QUALIFIER, UNKNOWN);
-//        }
-
 
     SetTokenNeeded(false);
     return false;
@@ -306,7 +309,6 @@ bool CParser::Qualifier(CLexer& token)
 bool CParser::Body(CLexer& token)
 {
     // *** NOT SURE IF THIS IS CORRECT
-    PrintRule("\t<Body> -> { <Statement List> } \n", token);
     
     try
     {
@@ -314,6 +316,7 @@ bool CParser::Body(CLexer& token)
         if ("{" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Body> -> { <Statement List> } \n", token);
             StatementList(token);
             GetToken(token);
             
@@ -423,22 +426,10 @@ bool CParser::Declaration(CLexer& token)
     PrintRule("\t<Declaration> -> <Qualifier> <IDs>\n", token);
     try
     {
-        
         if (Qualifier(token) && IDs(token))
         {
             return true;
         }
-//        else
-//        {
-//            // we are expecting a declaration so Qualifier should always
-//            //  return true here
-//            if (IDENTIFIER == token.GetTokenType())
-//            {
-//                SetError(EXPECTED_QUALIFIER, UNKNOWN);
-//                throw GetErrorType();
-//            }
-//        }
-
     }
     catch(const Error_CParser error)
     {
@@ -451,12 +442,11 @@ bool CParser::Declaration(CLexer& token)
 
 bool CParser::IDs(CLexer& token)
 {
-    PrintRule("\t<IDs> -> <Identifier> <IDs Prime>\n", token);
-
     GetToken(token);
     if (IDENTIFIER == token.GetTokenType())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<IDs> -> <Identifier> <IDs Prime>\n", token);
         return IDsPrime(token);
     }
     else
@@ -471,12 +461,11 @@ bool CParser::IDs(CLexer& token)
 
 bool CParser::IDsPrime(CLexer& token)
 {
-    PrintRule("\t<IDs Prime> -> , <IDs> | <Empty>\n", token);
-    
     GetToken(token);
     if ("," == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<IDs Prime> -> , <IDs> | <Empty>\n", token);
         return IDs(token);
     }
     else if (Empty(token))
@@ -525,9 +514,6 @@ bool CParser::StatementListPrime(CLexer& token)
 
 bool CParser::Statement(CLexer& token)
 {
-    PrintRule("\t<Statement> -> <Compount> | <Assign> | <If> |", token);
-    PrintRule(" <Return> | <Print> | <Scan> | <While>\n", token);
-    
     GetToken(token);
     if (Compound(token))
     {
@@ -576,20 +562,17 @@ bool CParser::Statement(CLexer& token)
         }
     }
     
-    
     return false;
 }
 
 
 bool CParser::Compound(CLexer& token)
 {
-    PrintRule("\t<Compound> -> { <Statement List> }\n", token);
-    
-    // *** NOT SURE IF THIS IS CORRECT
-
     if ("{" == token.GetLexeme())
     {
+        PrintRule("\t<Statement> -> <Compount>\n", token);
         SetTokenNeeded(true);
+        PrintRule("\t<Compound> -> { <Statement List> }\n", token);
         StatementList(token);
         GetToken(token);
         if ("}" == token.GetLexeme())
@@ -611,17 +594,15 @@ bool CParser::Compound(CLexer& token)
 
 bool CParser::Assign(CLexer& token)
 {
-    PrintRule("\t<Assign> -> <Identifier> = <Expression>;\n", token);
-    
-    // *** NOT SURE IF THIS IS CORRECT
-
     if (IDENTIFIER == token.GetTokenType())
     {
+        PrintRule("\t<Statement> -> <Assign>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if ("=" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Assign> -> <Identifier> = <Expression>;\n", token);
             Expression(token);
             GetToken(token);
             if (";" == token.GetLexeme())
@@ -659,18 +640,16 @@ bool CParser::Assign(CLexer& token)
 
 bool CParser::If(CLexer& token)
 {
-    PrintRule("\t<If> -> if ( <Condition> ) <Statement> <If Prime>", token);
-    PrintRule(" endif\n", token);
-    
-    // *** NOT SURE IF THIS IS CORRECT
-
     if ("IF" == token.GetLexeme())
     {
+        PrintRule("\t<Statement> -> <If>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if ("(" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<If> -> if ( <Condition> ) <Statement> <If Prime>", token);
+            PrintRule(" endif\n", token);
             Condition(token);
             GetToken(token);
             if (")" == token.GetLexeme())
@@ -734,8 +713,6 @@ bool CParser::If(CLexer& token)
 
 bool CParser::IfPrime(CLexer& token)
 {
-    PrintRule("\t<If Prime> -> else <Statement> | <Empty>\n", token);
-    
     GetToken(token);
     if("ELSE" == token.GetLexeme())
     {
@@ -754,12 +731,14 @@ bool CParser::IfPrime(CLexer& token)
         else
         {
             SetTokenNeeded(false);
+            PrintRule("\t<If Prime> -> else <Statement>\n", token);
             return Statement(token);
         }
     }
     else if (Empty(token))
     {
         SetTokenNeeded(false);
+        PrintRule("\t<If Prime> -> <Empty>\n", token);
         return true;
     }
     
@@ -770,11 +749,11 @@ bool CParser::IfPrime(CLexer& token)
 
 bool CParser::Return(CLexer& token)
 {
-    PrintRule("\t<Return> -> return <Return Prime>;\n", token);
-    
     if ("RETURN" == token.GetLexeme())
     {
+        PrintRule("\t<Statement> -> <Return>\n", token);
         SetTokenNeeded(true);
+        PrintRule("\t<Return> -> return <Return Prime>;\n", token);
         ReturnPrime(token);
         GetToken(token);
         if (";" == token.GetLexeme())
@@ -825,15 +804,15 @@ bool CParser::ReturnPrime(CLexer& token)
 
 bool CParser::Print(CLexer& token)
 {
-    PrintRule("\t<Print> -> put ( <Expression> );\n", token);
-    
     if ("PUT" == token.GetLexeme())
     {
+        PrintRule("\t<Statement> -> <Print>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if ("(" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Print> -> put ( <Expression> );\n", token);
             Expression(token);
             GetToken(token);
             if (")" == token.GetLexeme())
@@ -878,15 +857,16 @@ bool CParser::Print(CLexer& token)
 
 bool CParser::Scan(CLexer& token)
 {
-    PrintRule("\t<Scan> -> get ( <IDs> );\n", token);
-    
+
     if ("GET" == token.GetLexeme())
     {
+        PrintRule("\t<Statement> -> <Scan>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if ("(" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Scan> -> get ( <IDs> );\n", token);
             IDs(token);
             GetToken(token);
             if (")" == token.GetLexeme())
@@ -923,15 +903,15 @@ bool CParser::Scan(CLexer& token)
 
 bool CParser::While(CLexer& token)
 {
-    PrintRule("\t<While> -> while ( <Condition> ) <Statement>\n", token);
-    
     if ("WHILE" == token.GetLexeme())
     {
+        PrintRule("\t<Statement> -> <While>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if ("(" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<While> -> while ( <Condition> ) <Statement>\n", token);
             Condition(token);
             GetToken(token);
             if (")" == token.GetLexeme())
@@ -979,14 +959,40 @@ bool CParser::Condition(CLexer& token)
 
 bool CParser::Relop(CLexer& token)
 {
-    PrintRule("\t<Relop> -> == | ^= | > | < | => | =<\n", token);
-    
     GetToken(token);
     std::string lexeme = token.GetLexeme();
-    if ("==" == lexeme || "^=" == lexeme || ">" == lexeme ||
-         "<" == lexeme || "=>" == lexeme || "=<" == lexeme)
+    if ("==" == lexeme)
     {
         SetTokenNeeded(true);
+        PrintRule("\t<Relop> -> ==\n", token);
+        return true;
+    }
+    else if ("^=" == lexeme)
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Relop> -> ^=\n", token);
+        return true;
+    }
+    else if (">" == lexeme)
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Relop> -> >\n", token);
+        return true;
+    }
+    else if ("<" == lexeme)
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Relop> -> <\n", token);
+        return true;
+    }
+    else if ("=>" == lexeme)
+    {
+        
+    }
+    else if ("=<" == lexeme)
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Relop> -> =<\n", token);
         return true;
     }
     else
@@ -1016,15 +1022,20 @@ bool CParser::Expression(CLexer& token)
 
 bool CParser::ExpressionPrime(CLexer& token)
 {
-    PrintRule("\t<Expression Prime> -> + <Term> <Expression Prime> |", token);
-    PrintRule(" - <Term> <Expression Prime> | <Empty>\n", token);
-    
-    // *** NOT SURE IF THIS IS CORRECT
-    
     GetToken(token);
-    if ("+" == token.GetLexeme() || "-" == token.GetLexeme())
+    if ("+" == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<Expression Prime> -> + <Term> <Expression Prime>\n", token);
+        if (Term(token) && ExpressionPrime(token))
+        {
+            return true;
+        }
+    }
+    else if ("-" == token.GetLexeme())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Expression Prime> -> - <Term> <Expression Prime> |", token);
         if (Term(token) && ExpressionPrime(token))
         {
             return true;
@@ -1033,6 +1044,7 @@ bool CParser::ExpressionPrime(CLexer& token)
     else if (Empty(token))
     {
         SetTokenNeeded(false);
+        PrintRule("\t<Expression Prime> -> <Empty>\n", token);
         return true;
     }
     
@@ -1056,14 +1068,19 @@ bool CParser::Term(CLexer& token)
 
 bool CParser::TermPrime(CLexer& token)
 {
-    PrintRule("\t<Term Prime> -> * <Factor> <Term Prime> |", token);
-    PrintRule(" / <Factor> <Term Prime> | <Empty>\n", token);
-    
     GetToken(token);
-    
-    if ("*" == token.GetLexeme() || "/" == token.GetLexeme())
+    if ("*" == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<Term Prime> -> * <Factor> <Term Prime>\n", token);
+        Factor(token);
+        TermPrime(token);
+        return true;
+    }
+    else if (("/" == token.GetLexeme()))
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Term Prime> -> / <Factor> <Term Prime>\n", token);
         Factor(token);
         TermPrime(token);
         return true;
@@ -1071,10 +1088,11 @@ bool CParser::TermPrime(CLexer& token)
     else if (Empty(token))
     {
         SetTokenNeeded(false);
+        PrintRule("\t<Term Prime> -> <Empty>\n", token);
         return true;
     }
     
-    return false;    // return true for epsilon
+    return false;
 }
 
 
@@ -1100,9 +1118,6 @@ bool CParser::Factor(CLexer& token)
 
 bool CParser::Primary(CLexer& token)
 {
-    PrintRule("\t<Primary> -> <Identifier> <Identifier Prime> |", token);
-    PrintRule(" <Integer> | ( <Expression> ) | <Real> | true | false\n", token);
-    
     // we already called GetToken(token) in Factor function
     //  because we had to check if there was a - or not so we
     //  dont do it here
@@ -1111,16 +1126,19 @@ bool CParser::Primary(CLexer& token)
         if (IDENTIFIER == token.GetTokenType())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> <Identifier> <Identifier Prime>\n", token);
             return IdentifierPrime(token);
         }
         else if (INT == token.GetTokenType())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> <Integer>\n", token);
             return true;
         }
         else if ("(" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> ( <Expression> )\n", token);
             Expression(token);
             GetToken(token);
             if (")" == token.GetLexeme())
@@ -1137,12 +1155,19 @@ bool CParser::Primary(CLexer& token)
         else if (REAL == token.GetTokenType())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> <Real>\n", token);
             return true;
         }
-        else if ("TRUE" == token.GetLexeme() ||
-                 "FALSE" == token.GetLexeme())
+        else if ("TRUE" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> true\n", token);
+            return true;
+        }
+        else if ("FALSE" == token.GetLexeme())
+        {
+            SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> false\n", token);
             return true;
         }
         else
@@ -1175,12 +1200,11 @@ bool CParser::Primary(CLexer& token)
 
 bool CParser::IdentifierPrime(CLexer& token)
 {
-    PrintRule("\t<Identifier Prime> -> ( <IDs> ) | <Empty>\n", token);
-    
     GetToken(token);
     if ("(" == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        PrintRule("\t<Identifier Prime> -> ( <IDs> )\n", token);
         IDs(token);
         GetToken(token);
         if (")" == token.GetLexeme())
@@ -1197,6 +1221,7 @@ bool CParser::IdentifierPrime(CLexer& token)
     else if (Empty(token))
     {
         SetTokenNeeded(false);
+        PrintRule("\t<Identifier Prime> -> <Empty>\n", token);
         return true;
     }
     
@@ -1206,7 +1231,7 @@ bool CParser::IdentifierPrime(CLexer& token)
 
 bool CParser::Empty(CLexer& token)
 {
-    PrintRule("\t<Empty> -> ϵ\n", token);
+    PrintRule("\t<Empty> -> epsilon\n", token);
     return true;
 }
 
