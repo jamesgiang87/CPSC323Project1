@@ -6,11 +6,11 @@ function factorial [number:int]
     {
         return 1;
     }
-    else 
+    else
     {
-        !return number * factorial(number-1);!
-        number = number-1;
-        return number * factorial(number);
+        number = number - 1;
+        !return number * factorial((number-1));!
+        return (number + 1) * factorial(number);
     }
     endif
 }
@@ -18,7 +18,9 @@ function factorial [number:int]
 %%
 
 ! Get the factorial that the user wants to compute !
-int factorialNum, continueLoop;
+int factorialNum;
+boolean continueLoop;
+
 factorialNum = 0;
 continueLoop = true;
 
@@ -35,5 +37,4 @@ while (continueLoop == true)
 
 ! compute the factorial !
 put(factorial(factorialNum));
-
 
