@@ -6,7 +6,8 @@
 // ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
 // BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN token (Ex Lexical Analysis, Syntax Analysis..)
 
-// *** NEED TO FIX PARSE ERROR number=number got error saying no operator =number
+
+// *** NEED TO SEE IF we can optimize output for <Opt Declaration List> (rule10 through rule12) <Declaration>
 // *** CAN YOU HAVE int factorialNum = 0; bool continueLoop = true; right after %% in RAT18S
 ///    instead of int factorialNum, continueLoop;
 //                factorialNum = 0;
@@ -47,6 +48,7 @@ bool CParser::Rat18S(CLexer& token)
         if ("%%" == token.GetLexeme())
         {
             SetTokenNeeded(true);
+            
             OptDeclartionList(token);
             return StatementList(token);
         }
@@ -88,8 +90,6 @@ bool CParser::OptFunctionDefinitions(CLexer& token)
 bool CParser::FunctionDefinitions(CLexer& token)
 {   // *** NOT SURE WHAT TO RETURN AS IN BOOL
     
-    PrintRule("\t<Function Definitions> -> <Function>", token);
-    PrintRule(" <Function Definition Prime>\n", token);
     try
     {
         if (Function(token) && FunctionDefinitionsPrime(token))
@@ -114,12 +114,10 @@ bool CParser::FunctionDefinitionsPrime(CLexer& token)
     {
         return true;
     }
-    else if (Empty(token))
-    {
-        return true;
-    }
     
-    return false;    // either functiondefinitions returns true or epsilon
+    //PrintRule("\t<Function Definition Prime> -> <Empty>\n", token);
+    Empty(token);
+    return true;
 }
 
 
@@ -128,6 +126,8 @@ bool CParser::Function(CLexer& token)
     GetToken(token);
     if ("FUNCTION" == token.GetLexeme())
     {
+        PrintRule("\t<Function Definitions> -> <Function>", token);
+        PrintRule(" <Function Definition Prime>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if (IDENTIFIER == token.GetTokenType())
@@ -496,6 +496,7 @@ bool CParser::StatementListPrime(CLexer& token)
     }
     
     SetTokenNeeded(false);
+    //PrintRule("\t<Statement List Prime> -> <Empty>\n", token);
     Empty(token);
     return true;
 }
@@ -976,7 +977,9 @@ bool CParser::Relop(CLexer& token)
     }
     else if ("=>" == lexeme)
     {
-        
+        SetTokenNeeded(true);
+        PrintRule("\t<Relop> -> =>\n", token);
+        return true;
     }
     else if ("=<" == lexeme)
     {
@@ -1024,7 +1027,7 @@ bool CParser::ExpressionPrime(CLexer& token)
     else if ("-" == token.GetLexeme())
     {
         SetTokenNeeded(true);
-        PrintRule("\t<Expression Prime> -> - <Term> <Expression Prime> |", token);
+        PrintRule("\t<Expression Prime> -> - <Term> <Expression Prime>\n", token);
         if (Term(token) && ExpressionPrime(token))
         {
             return true;
