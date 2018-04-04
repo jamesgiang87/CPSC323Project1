@@ -6,7 +6,10 @@
 // ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
 // BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN token (Ex Lexical Analysis, Syntax Analysis..)
 
-
+// *** QUESTION do we only need left factorization when it calls functions only so if there
+//              is a terminal character liike rule 28 <Identifier> | <Identifier> ( IDS) you
+//              can determine which one to call? same with rule 6 <Parameter> |
+//                                                                <Parameter> , <Parameter List> dont think so
 // *** NEED TO SEE IF we can optimize output for <Opt Declaration List> (rule10 through rule12) <Declaration>
 // *** CAN YOU HAVE int factorialNum = 0; bool continueLoop = true; right after %% in RAT18S
 ///    instead of int factorialNum, continueLoop;
@@ -15,16 +18,8 @@
 // also cant have while (continue) has to be while (continue == true) right?
 // *** HOW ARE YOU TO SEPARATE IDENTIFIER FROM KEYWORDS LIKE REPLACING THE WORD WHILE WITH FIX WITH
 //     SAME SYNTAX... IT WOULD STILL WORK (IM GUESSING WE NEED THE NAME TABLE BUT PROBABLY NOT A FOCUS)
-//     FOR THIS CLASS
-// *** HOW DO WE: identify that a qualifer in the declaration list say we did a variable named
-//                num1 boolean isTrue;   it would work when it should be int num1; boolean isTrue;
-// *** NEED TO FIX???: return number * factorial(number-1); needs to be factorial((number-1)) or is the first suppose to be correct?
-//                     the error is thrown in IDs prime expecting a ) but that is meant for the outside.... 
-// *** ???NEED TO FIX: function() needs to return error for EXPECTED_KEYWORD
-// *** ???NEED TO FIX: Qualifier(CLexer& token) needs to return error for EXPECTED_QUALIFIER
-// ***       NEED TO FIX: Declaration(CLexer& token) needs to handle unique error for Qualifier or IDs (line 400)
-// *** ???NEED TO FIX: Statement(CLexer& token) to return unique error for EXPECTED_STATEMENT ??
-// ***       NEED TO FIX: StatementList(CLexer& token) to handle unique error from Statement
+//     FOR THIS CLASS PROJECT
+
 
 #include "CParser.hpp"
 #include "CLexer.hpp"
@@ -251,7 +246,15 @@ bool CParser::Parameter(CLexer& token)
         if (":" == token.GetLexeme())
         {
             SetTokenNeeded(true);
-            return Qualifier(token);
+            if(Qualifier(token))
+            {
+                return true;
+            }
+            else
+            {
+                SetError(EXPECTED_QUALIFIER, UNKNOWN);
+                throw EXPECTED_QUALIFIER;
+            }
         }
         else
         {
@@ -560,7 +563,7 @@ bool CParser::Compound(CLexer& token)
 {
     if ("{" == token.GetLexeme())
     {
-        PrintRule("\t<Statement> -> <Compount>\n", token);
+        PrintRule("\t<Statement> -> <Compound>\n", token);
         SetTokenNeeded(true);
         PrintRule("\t<Compound> -> { <Statement List> }\n", token);
         StatementList(token);

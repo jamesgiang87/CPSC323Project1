@@ -9,7 +9,7 @@
 #include <cctype>
 #include <fstream>
 #include <iostream>
-#include "CLexer.h"
+#include "CLexer.hpp"
 
 // ============================= CToken  Start =================================
 //==============================================================================
@@ -199,6 +199,7 @@ bool CLexer::CheckKeyword()
             minIndex = curIndex + 1;
             curIndex = minIndex + (maxIndex - minIndex)/2;
         }
+        
     }while(minIndex <= maxIndex);
     
     return false;
@@ -476,8 +477,14 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
             case DOLLAR_IDENTIFIER:
                 // we have just found out that it is an
                 //  identifier so label as accepted
-                SetCurrentState(END_IDENTIFIER);
-                SetTokenType(IDENTIFIER);
+            
+                // check if the identifier is really a keyword
+                if (!CheckKeyword())
+                {
+                    SetCurrentState(END_IDENTIFIER);
+                    SetTokenType(IDENTIFIER);
+                }
+            
                 return true;
                 break;
                 
@@ -580,18 +587,7 @@ void CLexer::FSM(const char curChar)
     if (IsWhiteSpace(curChar) && curState == INITIAL_STATE)
     {}
     // run every machines apart of the FSM
-    // SPECIAL CASE FOR IDENTIFIERS
-    else if (CheckIdentifier(curChar))
-    {
-        // check if state has changed
-        curState = GetCurrentState();
-        
-        if (curState == COULD_END_IDENTIFIER)
-        {
-            CheckKeyword();
-        }
-    }
-    else if (CheckNumber(curChar) || CheckOperators(curChar) ||
+    else if (CheckIdentifier(curChar) || CheckNumber(curChar) || CheckOperators(curChar) ||
              CheckSeparators(curChar))
     {}
     else
