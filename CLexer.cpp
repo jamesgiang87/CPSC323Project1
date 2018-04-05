@@ -161,16 +161,23 @@ bool CLexer::CheckIdentifier(const char curChar)
 //        not. If the token is a keyword the current State of the FSM
 //        (Finite State Machine) will be updated accordingly.
 //
-// Input: NONE
+// Input: curChar - the current character taken from the source file for
+//            evaluation.
 //
 // Output: true - if the state of the FSM (Finite State Machine) was changed.
 //       false - if the state of the FSM (Finite State Machine) was unchanged.
 //
 //==============================================================================
-bool CLexer::CheckKeyword()
+bool CLexer::CheckKeyword(const char curChar)
 {
     // stores the lexeme
     std::string lexeme = GetLexeme();
+    
+    if (IsSeparator(curChar))
+    {
+        // remove a seperator from a possible keyword like get( or put(
+        lexeme.pop_back();
+    }
     
     // highest index of the list we are searching
     int maxIndex = KEYWORDS_AMOUNT;
@@ -479,7 +486,7 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 //  identifier so label as accepted
             
                 // check if the identifier is really a keyword
-                if (!CheckKeyword())
+                if (!CheckKeyword(curChar))
                 {
                     SetCurrentState(END_IDENTIFIER);
                     SetTokenType(IDENTIFIER);
