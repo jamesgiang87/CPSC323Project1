@@ -13,6 +13,8 @@ const bool PRINT_RULE_STATEMENTS = true;
 enum Error_CParser
 {
     CPARSER_UNKNOWN_ERROR,
+    EXPECTED_CONDITION,
+    EXPECTED_EXPRESSION,
     EXPECTED_IDENTIFIER,
     EXPECTED_KEYWORD,
     EXPECTED_NOTHING,
@@ -70,7 +72,7 @@ class CParser
         bool Parameter(CLexer& token);                   // rule 7
         bool Qualifier(CLexer& token);                   // rule 8
         bool Body(CLexer& token);                        // rule 9
-        bool OptDeclartionList(CLexer& token);           // rule 10
+        bool OptDeclarationList(CLexer& token);           // rule 10
         bool DeclarationList(CLexer& token);             // rule 11
         bool DeclarationListPrime(CLexer& token);        // rule 11.1
         bool Declaration(CLexer& token);                 // rule 12

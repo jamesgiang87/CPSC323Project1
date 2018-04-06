@@ -1,21 +1,6 @@
 // Date Created: 3/24/18
 // Author: Austin Blanke
-// Class: CPSC 323 tokens & Languages
-
-//*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
-// ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
-// BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN token (Ex Lexical Analysis, Syntax Analysis..)
-
-
-// *** FIXED: OPTIONAL PARAMETER LIST THROWING ERROR AS IF IT WASNT OPTIONAL BUT MANDITORY
-// *** FIXED: NEED TO CHECK FOR EXTRA } after function declaration check whenever <statement> called
-// *** Question To TEAM: if you put endif after if statement but have else statement right after i
-//                       said expected if statement sound good?
-// *** Need to throw error for having extra } after matching } and for and error with random endif after }
-// *** HOW ARE YOU TO SEPARATE IDENTIFIER FROM KEYWORDS LIKE REPLACING THE WORD WHILE WITH FIX WITH
-//     SAME SYNTAX... IT WOULD STILL WORK (IM GUESSING WE NEED THE NAME TABLE BUT PROBABLY NOT A FOCUS)
-//     FOR THIS CLASS PROJECT
-
+// Class: CPSC 323 Compilers & Languages
 
 #include "CParser.h"
 #include "CLexer.h"
@@ -40,10 +25,11 @@ bool CParser::Rat18S(CLexer& token)
         {
             SetTokenNeeded(true);
             
-            OptDeclartionList(token);
+            OptDeclarationList(token);
             if (!StatementList(token))
             {
-                return false;
+                SetError(EXPECTED_STATEMENT, UNKNOWN);
+                throw GetErrorType();
             }
             
             if ("}" == token.GetLexeme())
@@ -52,6 +38,8 @@ bool CParser::Rat18S(CLexer& token)
                 SetError(EXPECTED_NOTHING, FindErrorExpTokenType(token));
                 throw GetErrorType();
             }
+            
+            return true;
         }
         else
         {
@@ -145,7 +133,7 @@ bool CParser::Function(CLexer& token)
                 if ("]" == token.GetLexeme())
                 {
                     SetTokenNeeded(true);
-                    if(OptDeclartionList(token) && Body(token))
+                    if(OptDeclarationList(token) && Body(token))
                     {
                         return true;
                     }
@@ -319,8 +307,6 @@ bool CParser::Qualifier(CLexer& token)
 
 bool CParser::Body(CLexer& token)
 {
-    // *** NOT SURE IF THIS IS CORRECT
-    
     try
     {
         GetToken(token);
@@ -328,17 +314,24 @@ bool CParser::Body(CLexer& token)
         {
             SetTokenNeeded(true);
             PrintRule("\t<Body> -> { <Statement List> } \n", token);
-            StatementList(token);
-            GetToken(token);
-            
-            if ("}" == token.GetLexeme())
+            if (StatementList(token))
             {
-                SetTokenNeeded(true);
-                return true;
+                GetToken(token);
+                
+                if ("}" == token.GetLexeme())
+                {
+                    SetTokenNeeded(true);
+                    return true;
+                }
+                else
+                {
+                    SetError(EXPECTED_SEPARATOR, RIGHT_BRACE);
+                    throw GetErrorType();
+                }
             }
             else
             {
-                SetError(EXPECTED_SEPARATOR, RIGHT_BRACE);
+                SetError(EXPECTED_STATEMENT, UNKNOWN);
                 throw GetErrorType();
             }
         }
@@ -356,7 +349,7 @@ bool CParser::Body(CLexer& token)
 }
 
 
-bool CParser::OptDeclartionList(CLexer& token)
+bool CParser::OptDeclarationList(CLexer& token)
 {
     PrintRule("\t<Opt Declaration List> -> <Declaration List>", token);
     PrintRule(" | <Empty>\n", token);
@@ -393,16 +386,15 @@ bool CParser::DeclarationList(CLexer& token)
             }
             else
             {
-                //if (token.GetLexeme)
                 SetError(EXPECTED_SEPARATOR, SEMI_COLON);
                 throw GetErrorType();
             }
         }
-        else if (Empty(token))
-        {
-            SetTokenNeeded(false);
-            return true;
-        }
+//        else if (Empty(token))
+//        {
+//            SetTokenNeeded(false);
+//            return true;
+//        }
     }
     catch(const Error_CParser error)
     {
@@ -492,7 +484,6 @@ bool CParser::StatementList(CLexer& token)
     PrintRule("\t<Statement List> -> <Statement>", token);
     PrintRule(" <Statement List Prime>\n", token);
     
-    // *** NOT SURE IF THIS IS CORRECT
     if (Statement(token) && StatementListPrime(token))
     {
         return true;
@@ -585,16 +576,23 @@ bool CParser::Compound(CLexer& token)
         PrintRule("\t<Statement> -> <Compound>\n", token);
         SetTokenNeeded(true);
         PrintRule("\t<Compound> -> { <Statement List> }\n", token);
-        StatementList(token);
-        GetToken(token);
-        if ("}" == token.GetLexeme())
+        if (StatementList(token))
         {
-            SetTokenNeeded(true);
-            return true;
+            GetToken(token);
+            if ("}" == token.GetLexeme())
+            {
+                SetTokenNeeded(true);
+                return true;
+            }
+            else
+            {
+                SetError(EXPECTED_SEPARATOR, RIGHT_BRACE);
+                throw GetErrorType();
+            }
         }
         else
         {
-            SetError(EXPECTED_SEPARATOR, RIGHT_BRACE);
+            SetError(EXPECTED_STATEMENT, UNKNOWN);
             throw GetErrorType();
         }
     }
@@ -615,16 +613,23 @@ bool CParser::Assign(CLexer& token)
         {
             SetTokenNeeded(true);
             PrintRule("\t<Assign> -> <Identifier> = <Expression>;\n", token);
-            Expression(token);
-            GetToken(token);
-            if (";" == token.GetLexeme())
+            if (Expression(token))
             {
-                SetTokenNeeded(true);
-                return true;
+                GetToken(token);
+                if (";" == token.GetLexeme())
+                {
+                    SetTokenNeeded(true);
+                    return true;
+                }
+                else
+                {
+                    SetError(EXPECTED_OPERATOR, SEMI_COLON);
+                    throw GetErrorType();
+                }
             }
             else
             {
-                SetError(EXPECTED_OPERATOR, SEMI_COLON);
+                SetError(EXPECTED_EXPRESSION, UNKNOWN);
                 throw GetErrorType();
             }
         }
@@ -662,57 +667,71 @@ bool CParser::If(CLexer& token)
             SetTokenNeeded(true);
             PrintRule("\t<If> -> if ( <Condition> ) <Statement> <If Prime>", token);
             PrintRule(" endif\n", token);
-            Condition(token);
-            GetToken(token);
-            if (")" == token.GetLexeme())
+            if (Condition(token))
             {
-                SetTokenNeeded(true);
-                Statement(token);
-                IfPrime(token);
                 GetToken(token);
-                if("ENDIF" == token.GetLexeme())
+                if (")" == token.GetLexeme())
                 {
-                    // This is a special case looking for errors if users want
-                    //  to put so kind of gibberish behind the endif token like
-                    //  ANY SEPARATOR
                     SetTokenNeeded(true);
-                    GetToken(token);
-                    if ("(" == token.GetLexeme())
+                    if (Statement(token))
                     {
-                        SetError(EXPECTED_KEYWORD, UNKNOWN);
-                        throw GetErrorType();
-                    }
-                    else if (SEPARATOR == token.GetTokenType() &&
-                           "{" != token.GetLexeme() && "}" != token.GetLexeme())
-                    {
-                        SetError(EXPECTED_NOTHING, FindErrorExpTokenType(token));
-                        throw GetErrorType();
-                    }
-                    else if (OPERATOR == token.GetTokenType())
-                    {
-                        SetError(EXPECTED_NOTHING, TOKEN_FOUND);
-                        throw GetErrorType();
-                    }
-                    else if ("ELSE" == token.GetLexeme())
-                    {
-                        SetError(EXPECTED_KEYWORD, IF);
-                        throw GetErrorType();
+                        IfPrime(token);
+                        GetToken(token);
+                        if("ENDIF" == token.GetLexeme())
+                        {
+                            // This is a special case looking for errors if users want
+                            //  to put so kind of gibberish behind the endif token like
+                            //  ANY SEPARATOR
+                            SetTokenNeeded(true);
+                            GetToken(token);
+                            if ("(" == token.GetLexeme())
+                            {
+                                SetError(EXPECTED_KEYWORD, UNKNOWN);
+                                throw GetErrorType();
+                            }
+                            else if (SEPARATOR == token.GetTokenType() &&
+                                   "{" != token.GetLexeme() && "}" != token.GetLexeme())
+                            {
+                                SetError(EXPECTED_NOTHING, FindErrorExpTokenType(token));
+                                throw GetErrorType();
+                            }
+                            else if (OPERATOR == token.GetTokenType())
+                            {
+                                SetError(EXPECTED_NOTHING, TOKEN_FOUND);
+                                throw GetErrorType();
+                            }
+                            else if ("ELSE" == token.GetLexeme())
+                            {
+                                SetError(EXPECTED_KEYWORD, IF);
+                                throw GetErrorType();
+                            }
+                            else
+                            {
+                                SetTokenNeeded(false);
+                                return true;
+                            }
+                        }
+                        else
+                        {
+                            SetError(EXPECTED_KEYWORD, ENDIF);
+                            throw GetErrorType();
+                        }
                     }
                     else
                     {
-                        SetTokenNeeded(false);
-                        return true;
+                        SetError(EXPECTED_STATEMENT, UNKNOWN);
+                        throw GetErrorType();
                     }
                 }
                 else
                 {
-                    SetError(EXPECTED_KEYWORD, ENDIF);
+                    SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
                     throw GetErrorType();
                 }
             }
             else
             {
-                SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+                SetError(EXPECTED_CONDITION, UNKNOWN);
                 throw GetErrorType();
             }
         }
@@ -749,7 +768,15 @@ bool CParser::IfPrime(CLexer& token)
         {
             SetTokenNeeded(false);
             PrintRule("\t<If Prime> -> else <Statement>\n", token);
-            return Statement(token);
+            if(Statement(token))
+            {
+                return true;
+            }
+            else
+            {
+                SetError(EXPECTED_STATEMENT, UNKNOWN);
+                throw GetErrorType();
+            }
         }
     }
     else if (Empty(token))
@@ -830,35 +857,42 @@ bool CParser::Print(CLexer& token)
         {
             SetTokenNeeded(true);
             PrintRule("\t<Print> -> put ( <Expression> );\n", token);
-            Expression(token);
-            GetToken(token);
-            if (")" == token.GetLexeme())
+            if (Expression(token))
             {
-                SetTokenNeeded(true);
                 GetToken(token);
-                if (";" == token.GetLexeme())
+                if (")" == token.GetLexeme())
                 {
                     SetTokenNeeded(true);
-                    return true;
+                    GetToken(token);
+                    if (";" == token.GetLexeme())
+                    {
+                        SetTokenNeeded(true);
+                        return true;
+                    }
+                    else
+                    {
+                        SetError(EXPECTED_SEPARATOR, SEMI_COLON);
+                        throw GetErrorType();
+                    }
                 }
                 else
                 {
-                    SetError(EXPECTED_SEPARATOR, SEMI_COLON);
-                    throw GetErrorType();
+                    if (IDENTIFIER == token.GetTokenType())
+                    {
+                        SetError(EXPECTED_SEPARATOR, LEFT_PAREN);
+                        throw GetErrorType();
+                    }
+                    else
+                    {
+                        SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+                        throw GetErrorType();
+                    }
                 }
             }
             else
             {
-                if (IDENTIFIER == token.GetTokenType())
-                {
-                    SetError(EXPECTED_SEPARATOR, LEFT_PAREN);
-                    throw GetErrorType();
-                }
-                else
-                {
-                    SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
-                    throw GetErrorType();
-                }
+                SetError(EXPECTED_EXPRESSION, UNKNOWN);
+                throw GetErrorType();
             }
         }
         else
@@ -884,26 +918,33 @@ bool CParser::Scan(CLexer& token)
         {
             SetTokenNeeded(true);
             PrintRule("\t<Scan> -> get ( <IDs> );\n", token);
-            IDs(token);
-            GetToken(token);
-            if (")" == token.GetLexeme())
+            if(IDs(token))
             {
-                SetTokenNeeded(true);
                 GetToken(token);
-                if (";" == token.GetLexeme())
+                if (")" == token.GetLexeme())
                 {
                     SetTokenNeeded(true);
-                    return true;
+                    GetToken(token);
+                    if (";" == token.GetLexeme())
+                    {
+                        SetTokenNeeded(true);
+                        return true;
+                    }
+                    else
+                    {
+                        SetError(EXPECTED_SEPARATOR, SEMI_COLON);
+                        throw GetErrorType();
+                    }
                 }
                 else
                 {
-                    SetError(EXPECTED_SEPARATOR, SEMI_COLON);
+                    SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
                     throw GetErrorType();
                 }
             }
             else
             {
-                SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+                SetError(EXPECTED_IDENTIFIER, UNKNOWN);
                 throw GetErrorType();
             }
         }
@@ -929,16 +970,31 @@ bool CParser::While(CLexer& token)
         {
             SetTokenNeeded(true);
             PrintRule("\t<While> -> while ( <Condition> ) <Statement>\n", token);
-            Condition(token);
-            GetToken(token);
-            if (")" == token.GetLexeme())
+            if (Condition(token))
             {
-                SetTokenNeeded(true);
-                return Statement(token);
+                GetToken(token);
+                if (")" == token.GetLexeme())
+                {
+                    SetTokenNeeded(true);
+                    if (Statement(token))
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        SetError(EXPECTED_STATEMENT, UNKNOWN);
+                        throw GetErrorType();
+                    }
+                }
+                else
+                {
+                    SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+                    throw GetErrorType();
+                }
             }
             else
             {
-                SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+                SetError(EXPECTED_CONDITION, UNKNOWN);
                 throw GetErrorType();
             }
         }
@@ -960,9 +1016,38 @@ bool CParser::Condition(CLexer& token)
     // *** NOT SURE IF THIS IS CORRECT
     try
     {
-        if ( Expression(token) && Relop(token) && Expression(token) )
+        if (Expression(token))
         {
-            return true;
+            if (Relop(token))
+            {
+                if (Expression(token))
+                {
+                    return true;
+                }
+                else
+                {
+                    SetError(EXPECTED_EXPRESSION, UNKNOWN);
+                    throw GetErrorType();
+                }
+            }
+            else
+            {
+                SetError(EXPECTED_RELOP, UNKNOWN);
+                throw GetErrorType();
+            }
+        }
+        else
+        {
+            if (")" == token.GetLexeme())
+            {
+                SetError(EXPECTED_CONDITION, UNKNOWN);
+                throw GetErrorType();
+            }
+            else
+            {
+                SetError(EXPECTED_EXPRESSION, UNKNOWN);
+                throw GetErrorType();
+            }
         }
     }
     catch(const Error_CParser error)
@@ -1028,8 +1113,6 @@ bool CParser::Expression(CLexer& token)
 {
     PrintRule("\t<Expression> -> <Term> <Expression Prime>\n", token);
     
-    // *** NOT SURE IF THIS IS CORRECT
-    
     if (Term(token) && ExpressionPrime(token))
     {
         return true;
@@ -1073,7 +1156,6 @@ bool CParser::Term(CLexer& token)
 {
     PrintRule("\t<Term> -> <Factor> <Term Prime>\n", token);
     
-    // *** NOT SURE IF THIS IS CORRECT
     if (Factor(token) && TermPrime(token))
     {
         return true;
@@ -1136,25 +1218,24 @@ bool CParser::Primary(CLexer& token)
     // we already called GetToken(token) in Factor function
     //  because we had to check if there was a - or not so we
     //  dont do it here
-    try
+    if (IDENTIFIER == token.GetTokenType())
     {
-        if (IDENTIFIER == token.GetTokenType())
+        SetTokenNeeded(true);
+        PrintRule("\t<Primary> -> <Identifier> <Identifier Prime>\n", token);
+        return IdentifierPrime(token);
+    }
+    else if (INT == token.GetTokenType())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Primary> -> <Integer>\n", token);
+        return true;
+    }
+    else if ("(" == token.GetLexeme())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Primary> -> ( <Expression> )\n", token);
+        if (Expression(token))
         {
-            SetTokenNeeded(true);
-            PrintRule("\t<Primary> -> <Identifier> <Identifier Prime>\n", token);
-            return IdentifierPrime(token);
-        }
-        else if (INT == token.GetTokenType())
-        {
-            SetTokenNeeded(true);
-            PrintRule("\t<Primary> -> <Integer>\n", token);
-            return true;
-        }
-        else if ("(" == token.GetLexeme())
-        {
-            SetTokenNeeded(true);
-            PrintRule("\t<Primary> -> ( <Expression> )\n", token);
-            Expression(token);
             GetToken(token);
             if (")" == token.GetLexeme())
             {
@@ -1167,46 +1248,29 @@ bool CParser::Primary(CLexer& token)
                 throw GetErrorType();
             }
         }
-        else if (REAL == token.GetTokenType())
-        {
-            SetTokenNeeded(true);
-            PrintRule("\t<Primary> -> <Real>\n", token);
-            return true;
-        }
-        else if ("TRUE" == token.GetLexeme())
-        {
-            SetTokenNeeded(true);
-            PrintRule("\t<Primary> -> true\n", token);
-            return true;
-        }
-        else if ("FALSE" == token.GetLexeme())
-        {
-            SetTokenNeeded(true);
-            PrintRule("\t<Primary> -> false\n", token);
-            return true;
-        }
         else
         {
+            SetError(EXPECTED_EXPRESSION, UNKNOWN);
             throw GetErrorType();
         }
     }
-    catch(const Error_CParser error)
+    else if (REAL == token.GetTokenType())
     {
-        if (error == CPARSER_UNKNOWN_ERROR)
-        {
-            // no condition above was met
-            if (!ErrorThrown())
-            {
-                std::cout << "Expected one of the below: " << std::endl;
-            }
-            PrintError(EXPECTED_IDENTIFIER, token);
-            PrintError(EXPECTED_KEYWORD, token);
-            PrintError(EXPECTED_SEPARATOR, token);
-        }
-        else
-        {
-            PrintError(error, token);
-        }
+        SetTokenNeeded(true);
+        PrintRule("\t<Primary> -> <Real>\n", token);
+        return true;
+    }
+    else if ("TRUE" == token.GetLexeme())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Primary> -> true\n", token);
+        return true;
+    }
+    else if ("FALSE" == token.GetLexeme())
+    {
+        SetTokenNeeded(true);
+        PrintRule("\t<Primary> -> false\n", token);
+        return true;
     }
     
     return false;
@@ -1220,16 +1284,23 @@ bool CParser::IdentifierPrime(CLexer& token)
     {
         SetTokenNeeded(true);
         PrintRule("\t<Identifier Prime> -> ( <IDs> )\n", token);
-        IDs(token);
-        GetToken(token);
-        if (")" == token.GetLexeme())
+        if (IDs(token))
         {
-            SetTokenNeeded(true);
-            return true;
+            GetToken(token);
+            if (")" == token.GetLexeme())
+            {
+                SetTokenNeeded(true);
+                return true;
+            }
+            else
+            {
+                SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+                throw GetErrorType();
+            }
         }
         else
         {
-            SetError(EXPECTED_SEPARATOR, RIGHT_PAREN);
+            SetError(EXPECTED_IDENTIFIER, UNKNOWN);
             throw GetErrorType();
         }
     }
@@ -1464,6 +1535,17 @@ void CParser::PrintError(const Error_CParser error, CLexer& token)
         
         switch(error)
         {
+            case EXPECTED_CONDITION:
+                std::cout << "RAT18S error: " << token.GetLineNum() << ":"
+                << colmNum << ": expected condition " << std::endl;
+                break;
+                
+            case EXPECTED_EXPRESSION:
+                std::cout << "RAT18S error: " << token.GetLineNum() << ":"
+                << colmNum << ": expected expression " << std::endl;
+                PrintToken(token);
+                break;
+                
             case EXPECTED_IDENTIFIER:
                 std::cout << "RAT18S error: " << token.GetLineNum() << ":"
                 << colmNum << ": expected identifier " << std::endl;
@@ -1482,7 +1564,6 @@ void CParser::PrintError(const Error_CParser error, CLexer& token)
                 std::cout << " "; PrintExpTokenType(token);
                 std::cout << std::endl << "\t";
                 PrintToken(token);
-                
                 break;
                 
             case EXPECTED_OPERATOR:

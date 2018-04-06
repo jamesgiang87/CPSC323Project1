@@ -9,15 +9,19 @@ function factorial [number:int]
     else
     {
         number = number - 1;
-        !return number * factorial((number-1));!
         return (number + 1) * factorial(number);
     }
     endif
 }
 
-function otherFun []
+function otherFunc []
 {
-    return 5;
+    return 777;
+}
+
+function otherotherFunc[num:int, nums:real, bool:boolean]
+{
+    return;
 }
 
 %%
@@ -36,7 +40,7 @@ boolean continueLoop;
 
         if (factorialNum => 1)
         {
-        continueLoop = false;
+            continueLoop = false;
         }
         endif
 
@@ -44,4 +48,7 @@ boolean continueLoop;
         put(factorial(factorialNum));
     }
 }
+
+
+
 
