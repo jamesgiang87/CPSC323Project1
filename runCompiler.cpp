@@ -58,13 +58,6 @@ int main(int argc, char* argv[])
      */
     
     compiler.Parse();
-    
-// *** TESTING ONLY
-    std::cout << std::endl;
-    std::cout << "PARSE COMPLETE" << std::endl;
-    std::cout << std::endl;
-// *** TESTING ONLNY
-    
     std::cout << std::endl;
     
     // close the output file
