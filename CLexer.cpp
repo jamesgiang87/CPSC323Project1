@@ -9,7 +9,7 @@
 #include <cctype>
 #include <fstream>
 #include <iostream>
-#include "CLexer.hpp"
+#include "CLexer.h"
 
 // ============================= CToken  Start =================================
 //==============================================================================

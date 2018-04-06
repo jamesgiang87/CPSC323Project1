@@ -6,23 +6,19 @@
 // ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
 // BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN token (Ex Lexical Analysis, Syntax Analysis..)
 
-// *** QUESTION do we only need left factorization when it calls functions only so if there
-//              is a terminal character liike rule 28 <Identifier> | <Identifier> ( IDS) you
-//              can determine which one to call? same with rule 6 <Parameter> |
-//                                                                <Parameter> , <Parameter List> dont think so
-// *** NEED TO SEE IF we can optimize output for <Opt Declaration List> (rule10 through rule12) <Declaration>
-// *** CAN YOU HAVE int factorialNum = 0; bool continueLoop = true; right after %% in RAT18S
-///    instead of int factorialNum, continueLoop;
-//                factorialNum = 0;
-//                continueLoop = true;
-// also cant have while (continue) has to be while (continue == true) right?
+
+// *** FIXED: OPTIONAL PARAMETER LIST THROWING ERROR AS IF IT WASNT OPTIONAL BUT MANDITORY
+// *** FIXED: NEED TO CHECK FOR EXTRA } after function declaration check whenever <statement> called
+// *** Question To TEAM: if you put endif after if statement but have else statement right after i
+//                       said expected if statement sound good?
+// *** Need to throw error for having extra } after matching } and for and error with random endif after }
 // *** HOW ARE YOU TO SEPARATE IDENTIFIER FROM KEYWORDS LIKE REPLACING THE WORD WHILE WITH FIX WITH
 //     SAME SYNTAX... IT WOULD STILL WORK (IM GUESSING WE NEED THE NAME TABLE BUT PROBABLY NOT A FOCUS)
 //     FOR THIS CLASS PROJECT
 
 
-#include "CParser.hpp"
-#include "CLexer.hpp"
+#include "CParser.h"
+#include "CLexer.h"
 #include <iostream>
 #include <stdlib.h>
 #include <iomanip>
@@ -45,7 +41,17 @@ bool CParser::Rat18S(CLexer& token)
             SetTokenNeeded(true);
             
             OptDeclartionList(token);
-            return StatementList(token);
+            if (!StatementList(token))
+            {
+                return false;
+            }
+            
+            if ("}" == token.GetLexeme())
+            {
+                // if you have an extra } at the end of a compound statement
+                SetError(EXPECTED_NOTHING, FindErrorExpTokenType(token));
+                throw GetErrorType();
+            }
         }
         else
         {
@@ -202,9 +208,12 @@ bool CParser::ParameterList(CLexer& token)
     PrintRule("\t<Parameter List> -> <Parameter>", token);
     PrintRule(" <Parameter List Prime>\n", token);
     
-    if (Parameter(token) && ParameterListPrime(token))
+    if (Parameter(token))
     {
-        return true;
+        if (ParameterListPrime(token))
+        {
+            return true;
+        }
     }
     
     return false;
@@ -235,38 +244,40 @@ bool CParser::Parameter(CLexer& token)
     // *** NOT SURE IF THIS IS CORRECT
     PrintRule("\t<Parameter> -> <IDs> : <Qualifier>\n", token);
     
-    IDs(token);
-
-    // *** already performed token.token in IDs to check if
-    //  there was a , (really checked in IDsPrime)
-    // ***NEED TO ADD A FIX HERE IN CASE , WAS FOUND NEED TO GET TOKEN
-    try
+    if (IDs(token))
     {
-        GetToken(token);
-        if (":" == token.GetLexeme())
+        // *** already performed token.token in IDs to check if
+        //  there was a , (really checked in IDsPrime)
+        // ***NEED TO ADD A FIX HERE IN CASE , WAS FOUND NEED TO GET TOKEN
+        try
         {
-            SetTokenNeeded(true);
-            if(Qualifier(token))
+            GetToken(token);
+            if (":" == token.GetLexeme())
             {
-                return true;
+                SetTokenNeeded(true);
+                if(Qualifier(token))
+                {
+                    return true;
+                }
+                else
+                {
+                    SetError(EXPECTED_QUALIFIER, UNKNOWN);
+                    throw EXPECTED_QUALIFIER;
+                }
             }
             else
             {
-                SetError(EXPECTED_QUALIFIER, UNKNOWN);
-                throw EXPECTED_QUALIFIER;
+                SetError(EXPECTED_SEPARATOR,  COLON);
+                throw EXPECTED_SEPARATOR;
             }
         }
-        else
+        catch(const Error_CParser error)
         {
-            SetError(EXPECTED_SEPARATOR,  COLON);
-            throw EXPECTED_SEPARATOR;
+            PrintError(error, token);
         }
     }
-    catch(const Error_CParser error)
-    {
-        PrintError(error, token);
-    }
     
+    SetTokenNeeded(false);
     return false;
 }
 
@@ -423,9 +434,17 @@ bool CParser::Declaration(CLexer& token)
     PrintRule("\t<Declaration> -> <Qualifier> <IDs>\n", token);
     try
     {
-        if (Qualifier(token) && IDs(token))
+        if (Qualifier(token))
         {
-            return true;
+            if (IDs(token))
+            {
+                return true;
+            }
+            else
+            {
+                SetError(EXPECTED_IDENTIFIER, UNKNOWN);
+                throw GetErrorType();
+            }
         }
     }
     catch(const Error_CParser error)
@@ -445,11 +464,6 @@ bool CParser::IDs(CLexer& token)
         SetTokenNeeded(true);
         PrintRule("\t<IDs> -> <Identifier> <IDs Prime>\n", token);
         return IDsPrime(token);
-    }
-    else
-    {
-        SetError(EXPECTED_IDENTIFIER, UNKNOWN);
-        throw GetErrorType();
     }
     
     return false;
@@ -499,7 +513,6 @@ bool CParser::StatementListPrime(CLexer& token)
     }
     
     SetTokenNeeded(false);
-    //PrintRule("\t<Statement List Prime> -> <Empty>\n", token);
     Empty(token);
     return true;
 }
@@ -550,6 +563,12 @@ bool CParser::Statement(CLexer& token)
         }
         else if (OPERATOR == token.GetTokenType())
         {
+            SetError(EXPECTED_IDENTIFIER, FindErrorExpTokenType(token));
+            throw GetErrorType();
+        }
+        else if (INT == token.GetTokenType())
+        {
+            // needed if you had int number; 0;
             SetError(EXPECTED_IDENTIFIER, FindErrorExpTokenType(token));
             throw GetErrorType();
         }
@@ -664,7 +683,7 @@ bool CParser::If(CLexer& token)
                         throw GetErrorType();
                     }
                     else if (SEPARATOR == token.GetTokenType() &&
-                             "}" != token.GetLexeme())
+                           "{" != token.GetLexeme() && "}" != token.GetLexeme())
                     {
                         SetError(EXPECTED_NOTHING, FindErrorExpTokenType(token));
                         throw GetErrorType();
@@ -672,6 +691,11 @@ bool CParser::If(CLexer& token)
                     else if (OPERATOR == token.GetTokenType())
                     {
                         SetError(EXPECTED_NOTHING, TOKEN_FOUND);
+                        throw GetErrorType();
+                    }
+                    else if ("ELSE" == token.GetLexeme())
+                    {
+                        SetError(EXPECTED_KEYWORD, IF);
                         throw GetErrorType();
                     }
                     else
@@ -1094,6 +1118,7 @@ bool CParser::Factor(CLexer& token)
     if ("-" == token.GetLexeme())
     {
         SetTokenNeeded(true);
+        GetToken(token);
         return Primary(token);
     }
     else
@@ -1427,7 +1452,12 @@ void CParser::PrintExpTokenType(const CLexer& token)
 void CParser::PrintError(const Error_CParser error, CLexer& token)
 {
 
-    long long colmNum = token.GetColmNum() - token.CalcErrorOffset();
+    long long colmNum = 0;
+    if (token.GetColmNum() > 0)
+    {
+        colmNum = token.GetColmNum() - token.CalcErrorOffset();
+    }
+    
     if (!ErrorThrown())
     {
         std::cout << std::endl;
@@ -1559,7 +1589,14 @@ void CParser::PrintToken(const CLexer& token)
             break;
     }
     
-    std::cout << "\t Lexeme: " << token.GetLexeme() << "\n";
+    if (token.GetLexeme() == "")
+    {
+        std::cout << "\t Lexeme: EOF" << "\n";
+    }
+    else
+    {
+        std::cout << "\t Lexeme: " << token.GetLexeme() << "\n";
+    }
 }
 
 
