@@ -117,6 +117,8 @@ bool CParser::Function(CLexer& token)
     {
         PrintRule("\t<Function Definitions> -> <Function>", token);
         PrintRule(" <Function Definition Prime>\n", token);
+        PrintRule("\t<Function> -> function <Identifier> [", token);
+        PrintRule(" <Opt Parameter List> ] <Opt Declaration List> <Body>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
         if (IDENTIFIER == token.GetTokenType())
@@ -125,8 +127,6 @@ bool CParser::Function(CLexer& token)
             GetToken(token);
             if ("[" == token.GetLexeme())
             {
-                PrintRule("\t<Function> -> function <Identifier> [", token);
-                PrintRule(" <Opt Parameter List> ] <Opt Declaration List> <Body>\n", token);
                 OptParameterList(token);
 
                 GetToken(token);
@@ -216,7 +216,7 @@ bool CParser::ParameterListPrime(CLexer& token)
     if ("," == token.GetLexeme())
     {
         SetTokenNeeded(true);
-        PrintRule("\t<Parameter List Prime> -> , <Parameter List>", token);
+        PrintRule("\t<Parameter List Prime> -> , <Parameter List>\n", token);
         return ParameterList(token);
     }
     

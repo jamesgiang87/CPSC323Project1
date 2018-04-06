@@ -15,7 +15,9 @@ function factorial [number:int]
 }
 
 function otherFunc []
+boolean unused;
 {
+    unused = true;
     return 777;
 }
 
