@@ -152,7 +152,7 @@ public:
     
     // LEXER FSMs
     bool CheckIdentifier(const char curChar);
-    bool CheckKeyword();
+    bool CheckKeyword(const char curChar);
     bool CheckNumber(const char curChar);
     bool CheckOperators(const char curChar);
     bool CheckSeparators(const char curChar);
