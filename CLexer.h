@@ -1,6 +1,7 @@
 // Date: 3/14/18
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
+// File: CLexer.h
 
 #ifndef CLexer_HEADER
 #define CLexer_HEADER
@@ -13,7 +14,6 @@ const int KEYWORDS_AMOUNT   = 13;
 const int OPERATOR_AMOUNT   = 8;
 const int SEPARATOR_AMOUNT  = 10;
 const int WHITESPACE_AMOUNT = 4;
-
 
 // stores all keywords available in RAT18S
 // THIS MUST BE SORTED!!!
@@ -64,7 +64,6 @@ enum State
 
 
 // stores every error flag that may occur in our FSM (Finite State Machine)
-// *** ADDED Error_CLexer from Error
 enum Error_CLexer
 {
     //ERROR FOR ERRORS HAHA
@@ -91,8 +90,8 @@ enum Token_Type
     TYPE_ERROR,
     IDENTIFIER,
     KEYWORD,
-    INT,
-    REAL,
+    INT_VALUE,
+    REAL_VALUE,
     OPERATOR,
     SEPARATOR,
     SYMBOL
@@ -111,12 +110,9 @@ public:
     std::string GetLexeme() const {return m_lexeme;}
     long long GetLexemeLength() const {return m_lexeme.length();}
     bool IsLexemeEmpty() {return m_lexeme.empty();}
-    // *** FUNCTION ADDED
     CToken& operator=(const CToken& lhs) {m_tokenType = lhs.GetTokenType();
                                       m_lexeme = lhs.GetLexeme(); return *this; }
-    // *** ADDED FUNCTION
     void PrintTokenType() const;
-    // *** ADDED FUNCTION
     void SetToken(const CToken token) {m_tokenType = token.GetTokenType();
                                        m_lexeme = token.GetLexeme();}
     void SetTokenType(const Token_Type tokenType) {m_tokenType = tokenType;}
@@ -138,7 +134,6 @@ class CLexer
 public:
     CLexer(): m_fsmState(INITIAL_STATE), m_lineNum(1), m_colmNum(0) {};
     CToken Lexer();
-    // *** COPY CONSTRUCTOR ADDED
     CLexer(const CToken& token) {m_token = token;}
     
     CLexer& operator=(const CLexer& lhs) {
@@ -167,14 +162,11 @@ public:
     State GetCurrentState() const {return m_fsmState;}
     std::string GetLexeme() const {return m_token.GetLexeme();}
     long long GetLexemeLength() const {return m_token.GetLexemeLength();}
-    // *** FUNCTION ADDED
     CToken GetToken() const {return m_token;}
     Token_Type GetTokenType() const {return m_token.GetTokenType();}
-    // *** FUNCTION ADDED
     void PrintTokenType() const {m_token.PrintTokenType();}
     void SetCurrentState(const State state) {m_fsmState = state;}
     void SetTokenType(const Token_Type token_type) {m_token.SetTokenType(token_type);}
-    // *** FUNCTION ADDED
     void SetToken(const CToken& token) {m_token = token;}
     inline void RemoveLastCharLexeme() {m_token.RemoveLastCharLexeme();}
     bool IsInAcceptingState();
@@ -186,7 +178,7 @@ public:
     
     // ERROR FUNCTIONS
     Error_CLexer DetermineError();
-    long long CalcErrorOffset();
+    long long CalcErrorOffset() const;
     void PrintError(const Error_CLexer errorType);
     
     // FILE FUNCTIONS
@@ -196,7 +188,6 @@ public:
     inline bool FileGood() {return m_inputFile.good();}
     inline void OpenFile(char* fileName) {m_inputFile.open(fileName);}
     inline void OpenFile(std::string fileName) {m_inputFile.open(fileName);}
-    //inline std::ifstream GetFile() const {return m_inputFile;}
     
     // LINE/COLUMN COUNTING FUNCTIONS
     long long int GetColmNum() const {return m_colmNum;}

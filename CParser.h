@@ -1,14 +1,16 @@
 //Date: 3/24/2018
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
+// File: Cparser.h
 
 #ifndef CParser_HEADER
 #define CParser_HEADER
 
 #include "CLexer.h"
+#include "CTables.h"
 
 // controls whether or not the rules for each production is printed to screen
-const bool PRINT_RULE_STATEMENTS = true;
+const bool PRINT_RULE_STATEMENTS = false;
 
 enum Error_CParser
 {
@@ -59,8 +61,8 @@ class CParser
         CParser(): m_needToken(true), m_ErrorThrown(false),
                    m_Error(CPARSER_UNKNOWN_ERROR),
                    m_Error_Exp_Token(UNKNOWN) {}
+    
         // FOR SYNTAX
-        
         bool Rat18S(CLexer& token);                      // rule 1
         bool OptFunctionDefinitions(CLexer& token);      // rule 2
         bool FunctionDefinitions(CLexer& token);         // rule 3
@@ -72,7 +74,7 @@ class CParser
         bool Parameter(CLexer& token);                   // rule 7
         bool Qualifier(CLexer& token);                   // rule 8
         bool Body(CLexer& token);                        // rule 9
-        bool OptDeclarationList(CLexer& token);           // rule 10
+        bool OptDeclarationList(CLexer& token);          // rule 10
         bool DeclarationList(CLexer& token);             // rule 11
         bool DeclarationListPrime(CLexer& token);        // rule 11.1
         bool Declaration(CLexer& token);                 // rule 12
@@ -99,7 +101,11 @@ class CParser
         bool Factor(CLexer& token);                      // rule 27
         bool Primary(CLexer& token);                     // rule 28
         bool IdentifierPrime(CLexer& token);             // rule 28.1
-        bool Empty(CLexer& token);                                    // rule 29
+        bool Empty(CLexer& token);                       // rule 29
+    
+        // SYMBOL TABLE FUNCTIONS
+        void PrintSymbolTable() const {m_symbolTable.List();}
+        void PrintInstrTable() const {m_instrTable.PrintTable();}
     
     private:
         bool TokenNeeded() {return m_needToken;}
@@ -107,14 +113,11 @@ class CParser
         void GetToken(CLexer& token);
         void SetError(const Error_CParser error, const Exp_Token_Type expToken);
         void SetErrorType(const Error_CParser error) {m_Error = error;}
-                        // there will only be one error until the program ends
-                        //{if (m_Error == CPARSER_UNKNOWN_ERROR) m_Error = error;}
         void SetErrorThrown(const bool thrown) {m_ErrorThrown = thrown;}
         bool ErrorThrown() {return m_ErrorThrown;}
         Error_CParser GetErrorType() {return m_Error;}
         void SetErrorExpTokenType(const Exp_Token_Type expToken)
                          {m_Error_Exp_Token = expToken;}
-                        //{if (m_Error == CPARSER_UNKNOWN_ERROR) m_Error_Exp_Token = expToken;}
         Exp_Token_Type FindErrorExpTokenType(const CLexer& token);
         Exp_Token_Type GetErrorExpTokenType() {return m_Error_Exp_Token;}
         void PrintExpTokenType(const CLexer& token);
@@ -122,11 +125,25 @@ class CParser
         void PrintRule(const std::string output, const CLexer& token);
         void PrintToken(const CLexer& token);
     
+        // SYMBOL TABLE PRIVATE MEMBER FUNCTIONS
+        void SetVariableType(const VariableTypes varType)
+                                    {m_symbolTable.SetRecVarTypeUsed(varType);}
+        void InsertVariable(const CToken& var) {m_symbolTable.Insert(var);}
+        void SetDeclaringVar(const bool state)
+                                        {m_symbolTable.SetDeclaringVar(state);}
+        void PrintError(const Error_SymbolTable error, const CLexer& token)const
+                                    {m_symbolTable.PrintError(error, token);}
+    
         bool m_needToken;
         bool m_ErrorThrown;
         Error_CParser m_Error;
         Exp_Token_Type m_Error_Exp_Token;
     
+        // SYMBOL TABLE
+        CSymbolTable m_symbolTable;
+    
+        // INSTRUCTION TABLE
+        CInstructionTable m_instrTable;
 };
 
 

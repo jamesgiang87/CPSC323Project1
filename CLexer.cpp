@@ -1,6 +1,7 @@
 // Date: 2/11/18
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
+// File: CLexer.cpp
 
 //*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
 // ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
@@ -31,11 +32,11 @@ void CToken::PrintTokenType() const
         case KEYWORD:
             std::cout << "keyword";
             break;
-        case INT:
+        case INT_VALUE:
             std::cout << "int";
             break;
             
-        case REAL:
+        case REAL_VALUE:
             std::cout << "real";
             break;
             
@@ -69,7 +70,7 @@ void CToken::PrintTokenType() const
 // Output: NONE
 //
 //==============================================================================
-long long CLexer::CalcErrorOffset()
+long long CLexer::CalcErrorOffset() const
 {
     long long colmOffset = 0;
     
@@ -500,7 +501,7 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 // we have just found out that its is not a
                 //  number anymore so we label it as accepted
                 SetCurrentState(END_INTEGER);
-                SetTokenType(INT);
+                SetTokenType(INT_VALUE);
                 return true;
                 break;
                 
@@ -508,7 +509,7 @@ bool CLexer::EndOfToken(const char curChar, const bool endFile)
                 // we just found out that it is a real number
                 //  so we label it as an accepting state
                 SetCurrentState(END_REAL);
-                SetTokenType(REAL);
+                SetTokenType(REAL_VALUE);
                 return true;
                 break;
                 

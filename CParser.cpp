@@ -1,6 +1,7 @@
 // Date Created: 3/24/18
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
+// File: CParser.cpp
 
 #include "CParser.h"
 #include "CLexer.h"
@@ -77,8 +78,7 @@ bool CParser::OptFunctionDefinitions(CLexer& token)
 
 
 bool CParser::FunctionDefinitions(CLexer& token)
-{   // *** NOT SURE WHAT TO RETURN AS IN BOOL
-    
+{
     try
     {
         if (Function(token) && FunctionDefinitionsPrime(token))
@@ -97,7 +97,7 @@ bool CParser::FunctionDefinitions(CLexer& token)
 
 bool CParser::FunctionDefinitionsPrime(CLexer& token)
 {
-    PrintRule("\t<Funciton Definition Prime> ->", token);
+    PrintRule("\t<Function Definition Prime> ->", token);
     PrintRule(" <Function Definitions> | <Empty>\n", token);
     if (FunctionDefinitions(token))
     {
@@ -156,7 +156,6 @@ bool CParser::Function(CLexer& token)
                 throw GetErrorType();
         }
     }
-// *** NEED TO FIGURE OUT TO THROW ERROR FOR MISSING FUNCTION KEYWORD
     else
     {
         // by looking at the grammar we can say that if we had function
@@ -192,7 +191,7 @@ bool CParser::OptParameterList(CLexer& token)
 
 
 bool CParser::ParameterList(CLexer& token)
-{ // *** NOT ENTIRELY SURE THIS IS CORRECT
+{
     PrintRule("\t<Parameter List> -> <Parameter>", token);
     PrintRule(" <Parameter List Prime>\n", token);
     
@@ -210,8 +209,6 @@ bool CParser::ParameterList(CLexer& token)
 
 bool CParser::ParameterListPrime(CLexer& token)
 {
-    // *** NOT SURE IF THIS IS CORRECT
-    
     GetToken(token);
     if ("," == token.GetLexeme())
     {
@@ -229,14 +226,12 @@ bool CParser::ParameterListPrime(CLexer& token)
 
 bool CParser::Parameter(CLexer& token)
 {
-    // *** NOT SURE IF THIS IS CORRECT
     PrintRule("\t<Parameter> -> <IDs> : <Qualifier>\n", token);
     
     if (IDs(token))
     {
         // *** already performed token.token in IDs to check if
         //  there was a , (really checked in IDsPrime)
-        // ***NEED TO ADD A FIX HERE IN CASE , WAS FOUND NEED TO GET TOKEN
         try
         {
             GetToken(token);
@@ -275,18 +270,27 @@ bool CParser::Qualifier(CLexer& token)
     GetToken(token);
     if ("INT"     == token.GetLexeme())
     {
+        //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
+        SetVariableType(INT);
+        SetDeclaringVar(true);
         SetTokenNeeded(true);
         PrintRule("\t<Qualifier> -> int\n", token);
         return true;
     }
     else if ("BOOLEAN" == token.GetLexeme())
     {
+        //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
+        SetVariableType(BOOLEAN);
+        SetDeclaringVar(true);
         SetTokenNeeded(true);
         PrintRule("\t<Qualifier> -> boolean\n", token);
         return true;
     }
     else if ("REAL"    == token.GetLexeme())
     {
+        //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
+        SetVariableType(REAL);
+        SetDeclaringVar(true);
         SetTokenNeeded(true);
         PrintRule("\t<Qualifier> -> real\n", token);
         return true;
@@ -370,7 +374,6 @@ bool CParser::OptDeclarationList(CLexer& token)
 
 bool CParser::DeclarationList(CLexer& token)
 {
-    // *** NOT SURE IF THIS IS CORRECT
     PrintRule("\t<Declaration List> -> <Declaration>;", token);
     PrintRule(" <Declaration List Prime>\n", token);
     
@@ -378,6 +381,9 @@ bool CParser::DeclarationList(CLexer& token)
     {
         if (Declaration(token))
         {
+            //*** NEXT TWO FUNCTIONS ADDED FOR SYMBOL TABLE (TO ADD VARS)
+            SetVariableType(NO_TYPE);
+            SetDeclaringVar(false);
             GetToken(token);
             if (";" == token.GetLexeme())
             {
@@ -390,11 +396,6 @@ bool CParser::DeclarationList(CLexer& token)
                 throw GetErrorType();
             }
         }
-//        else if (Empty(token))
-//        {
-//            SetTokenNeeded(false);
-//            return true;
-//        }
     }
     catch(const Error_CParser error)
     {
@@ -422,7 +423,6 @@ bool CParser::DeclarationListPrime(CLexer& token)
 
 bool CParser::Declaration(CLexer& token)
 {
-    // *** NOT SURE WHAT TO DO HERE
     PrintRule("\t<Declaration> -> <Qualifier> <IDs>\n", token);
     try
     {
@@ -453,6 +453,16 @@ bool CParser::IDs(CLexer& token)
     GetToken(token);
     if (IDENTIFIER == token.GetTokenType())
     {
+        //*** ADDED TO INSERT VARIABLES INTO SYMBOL TABLE
+        try
+        {
+            InsertVariable(token.GetToken());
+        }
+        catch(const Error_SymbolTable error)
+        {
+            PrintError(error, token);
+        }
+        
         SetTokenNeeded(true);
         PrintRule("\t<IDs> -> <Identifier> <IDs Prime>\n", token);
         return IDsPrime(token);
@@ -557,7 +567,7 @@ bool CParser::Statement(CLexer& token)
             SetError(EXPECTED_IDENTIFIER, FindErrorExpTokenType(token));
             throw GetErrorType();
         }
-        else if (INT == token.GetTokenType())
+        else if (INT_VALUE == token.GetTokenType())
         {
             // needed if you had int number; 0;
             SetError(EXPECTED_IDENTIFIER, FindErrorExpTokenType(token));
@@ -811,7 +821,7 @@ bool CParser::Return(CLexer& token)
             {   // in case a ( was left out
                 SetError(EXPECTED_SEPARATOR, LEFT_PAREN);
             }
-            else if (INT == token.GetTokenType())
+            else if (INT_VALUE == token.GetTokenType())
             {   // in case an operator was left out
                 SetError(EXPECTED_OPERATOR, UNKNOWN);
             }
@@ -1013,7 +1023,6 @@ bool CParser::Condition(CLexer& token)
 {
     PrintRule("\t<Condition> -> <Expression> <Relop> <Expression>\n", token);
     
-    // *** NOT SURE IF THIS IS CORRECT
     try
     {
         if (Expression(token))
@@ -1224,7 +1233,7 @@ bool CParser::Primary(CLexer& token)
         PrintRule("\t<Primary> -> <Identifier> <Identifier Prime>\n", token);
         return IdentifierPrime(token);
     }
-    else if (INT == token.GetTokenType())
+    else if (INT_VALUE == token.GetTokenType())
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Integer>\n", token);
@@ -1254,7 +1263,7 @@ bool CParser::Primary(CLexer& token)
             throw GetErrorType();
         }
     }
-    else if (REAL == token.GetTokenType())
+    else if (REAL_VALUE == token.GetTokenType())
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Real>\n", token);
@@ -1626,57 +1635,60 @@ void CParser::PrintRule(const std::string output, const CLexer& token)
 
 void CParser::PrintToken(const CLexer& token)
 {
-    std::cout << "Token: ";
-    
-    switch(token.GetTokenType())
+    if (PRINT_RULE_STATEMENTS)
     {
-        case IDENTIFIER:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout <<  "Identifier";
-            break;
-            
-        case KEYWORD:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Keyword";
-            break;
-        case INT:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Integer";
-            break;
-            
-        case REAL:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Real";
-            break;
-            
-        case OPERATOR:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Operator";
-            break;
-            
-        case SEPARATOR:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Separator";
-            break;
-            
-        case SYMBOL:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Symbol";
-            break;
-            
-        default:
-            std::cout << std::left << std::setw(strlen("identifier"));
-            std::cout << "Unknown";
-            break;
-    }
-    
-    if (token.GetLexeme() == "")
-    {
-        std::cout << "\t Lexeme: EOF" << "\n";
-    }
-    else
-    {
-        std::cout << "\t Lexeme: " << token.GetLexeme() << "\n";
+        std::cout << "Token: ";
+        
+        switch(token.GetTokenType())
+        {
+            case IDENTIFIER:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout <<  "Identifier";
+                break;
+                
+            case KEYWORD:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Keyword";
+                break;
+            case INT_VALUE:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Integer";
+                break;
+                
+            case REAL_VALUE:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Real";
+                break;
+                
+            case OPERATOR:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Operator";
+                break;
+                
+            case SEPARATOR:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Separator";
+                break;
+                
+            case SYMBOL:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Symbol";
+                break;
+                
+            default:
+                std::cout << std::left << std::setw(strlen("identifier"));
+                std::cout << "Unknown";
+                break;
+        }
+        
+        if (token.GetLexeme() == "")
+        {
+            std::cout << "\t Lexeme: EOF" << "\n";
+        }
+        else
+        {
+            std::cout << "\t Lexeme: " << token.GetLexeme() << "\n";
+        }
     }
 }
 
