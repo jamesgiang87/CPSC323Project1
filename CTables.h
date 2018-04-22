@@ -2,12 +2,18 @@
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
 // File: CTables.h
-//*** NEED TO CHECK ALL VARIABLE AND SEE HOW TO CONNECT THEM TO INT/BOOLEAN/REAL because they
-//    would most likely appear as identifiers i believe
-//*** NOT SURE IF - <PRIMARY> means negative value... if so how do we do this for
+
+//*** NEED TO CHECK FOR NO BOOLEAN ARITHMETIC
+//*** NEED TO MAKE SURE TYPE IS CORRECT IN ARITHMETIC
+
+//*** ASK TEACHER NOT SURE IF - <PRIMARY> means negative value... if so how do we do this for
 //    EXPRESSION
-//*** NEED TO MAKE SURE POPM FOR STDIN FOR EACH VARIABLE (IF CAN HAVE MULTIPLE VARIABLES IN GET(var, ovar)
+//*** ASK TEACHER NEED TO MAKE SURE POPM FOR STDIN FOR EACH VARIABLE (IF CAN HAVE MULTIPLE VARIABLES IN GET(var, ovar)
 //    SO FAR ONLY ONE VARIABLE HAS A POPM if you have Get(i, max, sum) only POPM for i ex. POPM 2000
+//*** ASK TEACHER DO WE NEED TO CHECK FOR LITERAL REAL VALUES SUCH AS return 7.77 or will assembly
+//    know to make it 7. Can find place to error check else if (REAL_VALUE == token.GetTokenType()) line 1389
+//*** ASK TEACHER IS BOOLEAN ALLOWED TO BE ASSIGNED 0 or 1? if so what do we do for >1 values and <1 values?
+//    FIND HOW TO SET ERROR IN CParser.cpp   else if (INT_VALUE == token.GetTokenType()) line 1349
 //*** NEED TO MAKE SURE THAT ERRORS ARE CAUGHT FOR THESE FUNCTIONS IN CParser.cpp
 
 #ifndef CTables_HEADER
@@ -35,6 +41,7 @@ const std::string VariableType[4] = {"NO_TYPE", "integer", "real", "boolean"};
 enum Error_SymbolTable
 {
         ST_NONE,
+        ST_BOOLEAN_ARITHMETIC,  // there is no boolean arithmetic allowed
         ST_REAL_USED,           // reals cannot be used for this assignment
         ST_REDECLARATION,       // variable is being redeclared
         ST_UNDECLARED,          // variable used when not declared
@@ -62,10 +69,15 @@ class CSymbolTable
         void Insert(const CToken& variable);
         void List() const;
     
+        void SetExpVarTypeUsed(const VariableTypes varType);
         void SetRecVarTypeUsed(const VariableTypes varType);
         void SetDeclaringVar(const bool state) {m_declaringVar = state;}
         void PrintError(const Error_SymbolTable error,const CLexer& token)const;
+        VariableTypes GetVarType(const std::string varName);
+        VariableTypes GetExpVarTypeUsed() {return m_ExpVarTypeUsed;}
+        std::string GetExpVarTypeUsedStr() const;
         int GetMemAddr(const std::string varName);
+    
     
     private:
     //PRIVATE MEMBER FUNCTIONS
@@ -100,6 +112,7 @@ class CSymbolTable
         int m_curMemAddr;               // the current memory address
         VariableTypes m_recVarTypeUsed; // most recent variable declared
         bool m_declaringVar;            // is variable being declared
+        VariableTypes m_ExpVarTypeUsed; // type of variable used in expression
         Error_SymbolTable m_error;      // stores error information
     
 };
@@ -129,7 +142,6 @@ struct ITI
 enum Error_InstrTable
 {
     IT_NONE,
-    IT_MEM_OUT_OF_RANGE,    // memory is from => 2000+
     IT_MAX_RANGE_REACHED       // only stores SYMBOL_TABLE_SIZE
 };
 
@@ -142,16 +154,16 @@ class CInstructionTable
         void GenerateInstr(const InstructionType instType,
                            const std::string addr = "");
         std::string GetInstrStr(const int instrNum);
-        int GetAddress(const int index) const {return m_table[index].addr;}
+        int GetAddress(const int index);
         int GetCurIndex() const {return m_curIndex;}
-        std::string GetInstr(const int index)const{return m_table[index].instr;}
-        std::string GetOperand(const int index) const {return m_table[index].operand;}
+        std::string GetInstr(const int index);
+        std::string GetOperand(const int index);
         void SetAddress(const int addr, const int index);
         void SetCurIndex(const int index) {m_curIndex = index;}
         void SetInstr(const std::string instr, const int index);
         void SetOperand(const std::string operand, const int index);
         void PrintError(const Error_InstrTable error,const CLexer& token)const;
-        void PrintTable() const;
+        void PrintTable();
         int PopJumpStack();
         void PushJumpStack(const int addr);
     

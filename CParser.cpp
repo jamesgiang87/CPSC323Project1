@@ -274,7 +274,7 @@ bool CParser::Qualifier(CLexer& token)
     if ("INT" == token.GetLexeme())
     {
         //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
-        SetVariableType(INT);
+        SetRecVariableType(INT);
         SetDeclaringVar(true);
         SetTokenNeeded(true);
         PrintRule("\t<Qualifier> -> int\n", token);
@@ -283,7 +283,7 @@ bool CParser::Qualifier(CLexer& token)
     else if ("BOOLEAN" == token.GetLexeme())
     {
         //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
-        SetVariableType(BOOLEAN);
+        SetRecVariableType(BOOLEAN);
         SetDeclaringVar(true);
         SetTokenNeeded(true);
         PrintRule("\t<Qualifier> -> boolean\n", token);
@@ -294,7 +294,7 @@ bool CParser::Qualifier(CLexer& token)
         //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
         try
         {
-            SetVariableType(REAL);
+            SetRecVariableType(REAL);
             SetDeclaringVar(true);
             SetTokenNeeded(true);
             PrintRule("\t<Qualifier> -> real\n", token);
@@ -393,7 +393,7 @@ bool CParser::DeclarationList(CLexer& token)
         if (Declaration(token))
         {
             //*** NEXT TWO FUNCTIONS ADDED FOR SYMBOL TABLE (TO ADD VARS)
-            SetVariableType(NO_TYPE);
+            SetRecVariableType(NO_TYPE);
             SetDeclaringVar(false);
             
             GetToken(token);
@@ -632,6 +632,15 @@ bool CParser::Assign(CLexer& token)
     {
         // *** USED FOR TO STORE INSTRUCTION (IN SOLUTION)
         CToken id; id.SetLexeme(token.GetLexeme());
+        try
+        {
+            SetExpVarialeType(GetVariableType(token.GetLexeme()));
+        }
+        catch(const Error_SymbolTable error)
+        {
+            PrintError(error, token);
+        }
+        
         PrintRule("\t<Statement> -> <Assign>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
@@ -646,6 +655,7 @@ bool CParser::Assign(CLexer& token)
                 {
                     GenerateInstr(POPM,
                       std::to_string(m_symbolTable.GetMemAddr(id.GetLexeme())));
+                    SetExpVarialeType(NO_TYPE);
                 }
                 catch(const Error_SymbolTable error)
                 {
@@ -914,7 +924,14 @@ bool CParser::Print(CLexer& token)
                         SetTokenNeeded(true);
                         
                         // *** NEEDED FOR INSTRUCTION TABLE (NEEDED TO FIND PART OF ASSIGNMENT)
-                        GenerateInstr(STDOUT);
+                        try
+                        {
+                            GenerateInstr(STDOUT);
+                        }
+                        catch(const Error_InstrTable error)
+                        {
+                            PrintError(error, token);
+                        }
                         return true;
                     }
                     else
@@ -985,9 +1002,9 @@ bool CParser::Scan(CLexer& token)
                         //     HOW MANY VARIABLES TO GET BECUASE YOU CAN HAVE
                         //     GET(MAX, i, otherVar) WOULD IT KNOW TO GET 3
                         //     VALUES?
-                        GenerateInstr(STDIN);
                         try
                         {
+                            GenerateInstr(STDIN);
                             GenerateInstr(POPM,
                    std::to_string(m_symbolTable.GetMemAddr(id.GetLexeme())));
                         }
@@ -1034,7 +1051,14 @@ bool CParser::While(CLexer& token)
     {
         // *** ADDED TO KEEP TRACK OF INSTRUCTION TABLE ADDRESS AT CURRENT POINT (IN SOLUTION)
         int addr = m_instrTable.GetCurIndex();
-        GenerateInstr(LABEL);
+        try
+        {
+            GenerateInstr(LABEL);
+        }
+        catch(const Error_InstrTable error)
+        {
+            PrintError(error, token);
+        }
         
         PrintRule("\t<Statement> -> <While>\n", token);
         SetTokenNeeded(true);
@@ -1053,8 +1077,15 @@ bool CParser::While(CLexer& token)
                     {
                         // *** ADDED TO JUMP BACK TO TOP OF WHILE LOOP FOR
                         //     INSTRUCTION TABLE (IN SOLUTION)
-                        GenerateInstr(JUMP, std::to_string(addr));
-                        m_instrTable.BackPatch(m_instrTable.GetCurIndex());
+                        try
+                        {
+                            GenerateInstr(JUMP, std::to_string(addr));
+                            m_instrTable.BackPatch(m_instrTable.GetCurIndex());
+                        }
+                        catch(const Error_InstrTable error)
+                        {
+                            PrintError(error, token);
+                        }
                         return true;
                     }
                     else
@@ -1102,7 +1133,14 @@ bool CParser::Condition(CLexer& token)
                 if (Expression(token))
                 {
                     // *** NEEDED FOR INSTRUCTION TABLE (IN SOLUTION, DIFFERENT FORMAT)
-                    GenerateRelopInstr(savedLexeme);
+                    try
+                    {
+                        GenerateRelopInstr(savedLexeme);
+                    }
+                    catch(const Error_InstrTable error)
+                    {
+                        PrintError(error, token);
+                    }
                     return true;
                 }
                 else
@@ -1208,12 +1246,25 @@ bool CParser::ExpressionPrime(CLexer& token)
     GetToken(token);
     if ("+" == token.GetLexeme())
     {
+        //*** NEEDED FOR BOOLEAN ARITHMETIC ERROR
+        if (GetExpVariableTypeStr() == VariableType[BOOLEAN])
+        {
+            PrintError(ST_BOOLEAN_ARITHMETIC, token);
+        }
         SetTokenNeeded(true);
         PrintRule("\t<Expression Prime> -> + <Term> <Expression Prime>\n", token);
         if (Term(token))
         {
             // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
-            GenerateInstr(ADD);
+            try
+            {
+                GenerateInstr(ADD);
+            }
+            catch(const Error_InstrTable error)
+            {
+                PrintError(error, token);
+            }
+            
             if (ExpressionPrime(token))
             {
                 return true;
@@ -1222,12 +1273,25 @@ bool CParser::ExpressionPrime(CLexer& token)
     }
     else if ("-" == token.GetLexeme())
     {
+        //*** NEEDED FOR BOOLEAN ARITHMETIC ERROR
+        if (GetExpVariableTypeStr() == VariableType[BOOLEAN])
+        {
+            PrintError(ST_BOOLEAN_ARITHMETIC, token);
+        }
         SetTokenNeeded(true);
         PrintRule("\t<Expression Prime> -> - <Term> <Expression Prime>\n", token);
         if (Term(token))
         {
             // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
-            GenerateInstr(SUB);
+            try
+            {
+                GenerateInstr(SUB);
+            }
+            catch(const Error_InstrTable error)
+            {
+                PrintError(error, token);
+            }
+            
             if (ExpressionPrime(token))
             {
                 return true;
@@ -1266,7 +1330,15 @@ bool CParser::TermPrime(CLexer& token)
         Factor(token);
         
         //*** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
-        GenerateInstr(MUL);
+        try
+        {
+            GenerateInstr(MUL);
+        }
+        catch(const Error_InstrTable error)
+        {
+            PrintError(error, token);
+        }
+        
         TermPrime(token);
         return true;
     }
@@ -1277,7 +1349,14 @@ bool CParser::TermPrime(CLexer& token)
         Factor(token);
         
         // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
-        GenerateInstr(DIV);
+        try
+        {
+            GenerateInstr(DIV);
+        }
+        catch(const Error_InstrTable error)
+        {
+            PrintError(error, token);
+        }
         TermPrime(token);
         return true;
     }
@@ -1332,10 +1411,16 @@ bool CParser::Primary(CLexer& token)
         // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION BUT WRONG PLACE)
         try
         {
+            SetExpVarialeType(GetVariableType(token.GetLexeme()));
             GenerateInstr(PUSHM,
                    std::to_string(m_symbolTable.GetMemAddr(token.GetLexeme())));
+    
         }
         catch(const Error_SymbolTable error)
+        {
+            PrintError(error, token);
+        }
+        catch(const Error_InstrTable error)
         {
             PrintError(error, token);
         }
@@ -1347,14 +1432,21 @@ bool CParser::Primary(CLexer& token)
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Integer>\n", token);
         // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
-        if ("-" == lexeme)
+        try
         {
-            lexeme = lexeme + token.GetLexeme();
-            GenerateInstr(PUSHI, lexeme);
+            if ("-" == lexeme)
+            {
+                lexeme = lexeme + token.GetLexeme();
+                GenerateInstr(PUSHI, lexeme);
+            }
+            else
+            {
+                GenerateInstr(PUSHI, token.GetLexeme());
+            }
         }
-        else
+        catch(const Error_InstrTable error)
         {
-            GenerateInstr(PUSHI, token.GetLexeme());
+            PrintError(error, token);
         }
         return true;
     }
@@ -1384,25 +1476,70 @@ bool CParser::Primary(CLexer& token)
     }
     else if (REAL_VALUE == token.GetTokenType())
     {
-        SetTokenNeeded(true);
-        PrintRule("\t<Primary> -> <Real>\n", token);
-        return true;
+        if (GetExpVariableTypeStr() == VariableType[REAL])
+        {
+            SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> <Real>\n", token);
+            return true;
+        }
+        else
+        {
+            if (GetExpVariableTypeStr() == VariableType[NO_TYPE])
+            {
+                PrintError(ST_REAL_USED, token);
+            }
+            else
+            {
+                PrintError(ST_OPERATION_MISMATCH, token);
+            }
+        }
     }
     else if ("TRUE" == token.GetLexeme())
     {
-        SetTokenNeeded(true);
-        PrintRule("\t<Primary> -> true\n", token);
-        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
-        GenerateInstr(PUSHI, std::to_string(1));
-        return true;
+        // *** ADDED FOR SYMBOL TABLE TO CHECK BOOLEAN ARITHMETIC ERROR
+        if (GetExpVariableTypeStr() == VariableType[BOOLEAN] ||
+            GetExpVariableTypeStr() == VariableType[NO_TYPE])
+        {
+            SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> true\n", token);
+            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+            try
+            {
+                GenerateInstr(PUSHI, std::to_string(1));
+            }
+            catch(const Error_InstrTable error)
+            {
+                PrintError(error, token);
+            }
+            return true;
+        }
+        else
+        {
+            PrintError(ST_BOOLEAN_ARITHMETIC, token);
+        }
     }
     else if ("FALSE" == token.GetLexeme())
     {
-        SetTokenNeeded(true);
-        PrintRule("\t<Primary> -> false\n", token);
-        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
-        GenerateInstr(PUSHI, std::to_string(0));
-        return true;
+        // *** ADDED FOR SYMBOL TABLE TO CHECK BOOLEAN ARITHMETIC ERROR
+        if (GetExpVariableTypeStr() == VariableType[BOOLEAN])
+        {
+            SetTokenNeeded(true);
+            PrintRule("\t<Primary> -> false\n", token);
+            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+            try
+            {
+                GenerateInstr(PUSHI, std::to_string(0));
+            }
+            catch(const Error_InstrTable error)
+            {
+                PrintError(error, token);
+            }
+            return true;
+        }
+        else
+        {
+            PrintError(ST_BOOLEAN_ARITHMETIC, token);
+        }
     }
     
     return false;
@@ -1823,34 +1960,41 @@ void CParser::PrintToken(const CLexer& token)
 
 void CParser::GenerateRelopInstr(const std::string savedLexeme)
 {
-    if ("==" == savedLexeme)
+    try
     {
-        GenerateInstr(EQU);
-    }
-    else if ("^=" == savedLexeme)
-    {
-        GenerateInstr(NEQ);
-    }
-    else if (">" == savedLexeme)
-    {
-        GenerateInstr(GRT);
-    }
-    else if ("<" == savedLexeme)
-    {
-        GenerateInstr(LES);
-    }
-    else if ("=>" == savedLexeme)
-    {
-        GenerateInstr(GEQ);
-    }
-    else if ("=<" == savedLexeme)
-    {
-        GenerateInstr(LEQ);
-    }
+        if ("==" == savedLexeme)
+        {
+            GenerateInstr(EQU);
+        }
+        else if ("^=" == savedLexeme)
+        {
+            GenerateInstr(NEQ);
+        }
+        else if (">" == savedLexeme)
+        {
+            GenerateInstr(GRT);
+        }
+        else if ("<" == savedLexeme)
+        {
+            GenerateInstr(LES);
+        }
+        else if ("=>" == savedLexeme)
+        {
+            GenerateInstr(GEQ);
+        }
+        else if ("=<" == savedLexeme)
+        {
+            GenerateInstr(LEQ);
+        }
 
-    // need to push index of instruction we want not the instruction number
-    m_instrTable.PushJumpStack(m_instrTable.GetCurIndex()-1);
-    GenerateInstr(JUMPZ);
+        // need to push index of instruction we want not the instruction number
+        m_instrTable.PushJumpStack(m_instrTable.GetCurIndex()-1);
+        GenerateInstr(JUMPZ);
+    }
+    catch(const Error_InstrTable error)
+    {
+        throw error;
+    }
 }
 
 

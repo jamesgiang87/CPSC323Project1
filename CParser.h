@@ -109,7 +109,7 @@ class CParser
                                     { if (!ErrorThrown()) m_symbolTable.List();}
     
         // INSTRUCTION TABLE FUCNTIONS
-        void PrintInstrTable() const
+        void PrintInstrTable()
                                { if (!ErrorThrown()) m_instrTable.PrintTable();}
     
     private:
@@ -131,11 +131,17 @@ class CParser
         void PrintToken(const CLexer& token);
     
         // SYMBOL TABLE PRIVATE MEMBER FUNCTIONS
-        void SetVariableType(const VariableTypes varType)
-                                    {m_symbolTable.SetRecVarTypeUsed(varType);}
         void InsertVariable(const CToken& var) {m_symbolTable.Insert(var);}
         void SetDeclaringVar(const bool state)
                                         {m_symbolTable.SetDeclaringVar(state);}
+        void SetExpVarialeType(const VariableTypes varType)
+                                    {m_symbolTable.SetExpVarTypeUsed(varType);}
+        void SetRecVariableType(const VariableTypes varType)
+                                    {m_symbolTable.SetRecVarTypeUsed(varType);}
+        std::string GetExpVariableTypeStr() const
+                                {return m_symbolTable.GetExpVarTypeUsedStr();}
+        VariableTypes GetVariableType(const std::string lexeme)
+                                    {return m_symbolTable.GetVarType(lexeme); }
         void PrintError(const Error_SymbolTable error, const CLexer& token)
             { if (!ErrorThrown()) m_symbolTable.PrintError(error, token);
                 SetErrorThrown(true); }

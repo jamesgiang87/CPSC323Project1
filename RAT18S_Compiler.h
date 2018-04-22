@@ -31,7 +31,7 @@ public:
     // CPARSER FUNCTIONS
     void Parse() {m_parser.Rat18S(m_lexer);}
     void PrintSymbolTable() const {m_parser.PrintSymbolTable();}
-    void PrintInstructionTable() const {m_parser.PrintInstrTable();}
+    void PrintInstructionTable() {m_parser.PrintInstrTable();}
 
     
 private:
