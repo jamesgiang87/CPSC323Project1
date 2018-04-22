@@ -113,6 +113,7 @@ public:
     CToken& operator=(const CToken& lhs) {m_tokenType = lhs.GetTokenType();
                                       m_lexeme = lhs.GetLexeme(); return *this; }
     void PrintTokenType() const;
+    void SetLexeme(const std::string str) {m_lexeme = str;}
     void SetToken(const CToken token) {m_tokenType = token.GetTokenType();
                                        m_lexeme = token.GetLexeme();}
     void SetTokenType(const Token_Type tokenType) {m_tokenType = tokenType;}
@@ -166,7 +167,9 @@ public:
     Token_Type GetTokenType() const {return m_token.GetTokenType();}
     void PrintTokenType() const {m_token.PrintTokenType();}
     void SetCurrentState(const State state) {m_fsmState = state;}
-    void SetTokenType(const Token_Type token_type) {m_token.SetTokenType(token_type);}
+    void SetLexeme(const std::string lexeme) {m_token.SetLexeme(lexeme);}
+    void SetTokenType(const Token_Type token_type)
+                                            {m_token.SetTokenType(token_type);}
     void SetToken(const CToken& token) {m_token = token;}
     inline void RemoveLastCharLexeme() {m_token.RemoveLastCharLexeme();}
     bool IsInAcceptingState();

@@ -115,6 +115,9 @@ bool CParser::Function(CLexer& token)
     GetToken(token);
     if ("FUNCTION" == token.GetLexeme())
     {
+        //*** RULE FOR ASSIGNMENT 3 THAT NOT FUNCTIONS CAN BE MADE
+        PrintError(FUNCTION_USED, token);
+        
         PrintRule("\t<Function Definitions> -> <Function>", token);
         PrintRule(" <Function Definition Prime>\n", token);
         PrintRule("\t<Function> -> function <Identifier> [", token);
@@ -268,7 +271,7 @@ bool CParser::Parameter(CLexer& token)
 bool CParser::Qualifier(CLexer& token)
 {
     GetToken(token);
-    if ("INT"     == token.GetLexeme())
+    if ("INT" == token.GetLexeme())
     {
         //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
         SetVariableType(INT);
@@ -289,11 +292,19 @@ bool CParser::Qualifier(CLexer& token)
     else if ("REAL"    == token.GetLexeme())
     {
         //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
-        SetVariableType(REAL);
-        SetDeclaringVar(true);
-        SetTokenNeeded(true);
-        PrintRule("\t<Qualifier> -> real\n", token);
-        return true;
+        try
+        {
+            SetVariableType(REAL);
+            SetDeclaringVar(true);
+            SetTokenNeeded(true);
+            PrintRule("\t<Qualifier> -> real\n", token);
+            return true;
+        }
+        catch(const Error_SymbolTable error)
+        {
+            PrintError(error, token);
+            SetErrorThrown(true);
+        }
     }
     else
     {
@@ -384,6 +395,7 @@ bool CParser::DeclarationList(CLexer& token)
             //*** NEXT TWO FUNCTIONS ADDED FOR SYMBOL TABLE (TO ADD VARS)
             SetVariableType(NO_TYPE);
             SetDeclaringVar(false);
+            
             GetToken(token);
             if (";" == token.GetLexeme())
             {
@@ -591,6 +603,8 @@ bool CParser::Compound(CLexer& token)
             GetToken(token);
             if ("}" == token.GetLexeme())
             {
+ //*** NOT SURE IF NEEDED               // *** NEEDED FOR INSTRUCTION TABLE (NEEDED TO FIND IN SOLUTION)
+//                m_instrTable.BackPatch(m_instrTable.GetCurIndex());
                 SetTokenNeeded(true);
                 return true;
             }
@@ -616,6 +630,8 @@ bool CParser::Assign(CLexer& token)
 {
     if (IDENTIFIER == token.GetTokenType())
     {
+        // *** USED FOR TO STORE INSTRUCTION (IN SOLUTION)
+        CToken id; id.SetLexeme(token.GetLexeme());
         PrintRule("\t<Statement> -> <Assign>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
@@ -625,6 +641,19 @@ bool CParser::Assign(CLexer& token)
             PrintRule("\t<Assign> -> <Identifier> = <Expression>;\n", token);
             if (Expression(token))
             {
+                // *** USED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
+                try
+                {
+                    GenerateInstr(POPM,
+                      std::to_string(m_symbolTable.GetMemAddr(id.GetLexeme())));
+                }
+                catch(const Error_SymbolTable error)
+                {
+                    // saved the variable name that is undeclared
+                    token.SetLexeme(id.GetLexeme());
+                    PrintError(error, token);
+                }
+                
                 GetToken(token);
                 if (";" == token.GetLexeme())
                 {
@@ -685,6 +714,10 @@ bool CParser::If(CLexer& token)
                     SetTokenNeeded(true);
                     if (Statement(token))
                     {
+                        // *** NEEDED FOR INSTRUCTION TABLE IN SOLUTION (didnt
+                        //     include addr = instr_address() because useless?
+                        m_instrTable.BackPatch(m_instrTable.GetCurIndex());
+                        
                         IfPrime(token);
                         GetToken(token);
                         if("ENDIF" == token.GetLexeme())
@@ -780,6 +813,8 @@ bool CParser::IfPrime(CLexer& token)
             PrintRule("\t<If Prime> -> else <Statement>\n", token);
             if(Statement(token))
             {
+                // *** NEEDED FOR INSTRUCTION TABLE NOT IN SOLUTION
+                m_instrTable.BackPatch(m_instrTable.GetCurIndex());
                 return true;
             }
             else
@@ -877,6 +912,9 @@ bool CParser::Print(CLexer& token)
                     if (";" == token.GetLexeme())
                     {
                         SetTokenNeeded(true);
+                        
+                        // *** NEEDED FOR INSTRUCTION TABLE (NEEDED TO FIND PART OF ASSIGNMENT)
+                        GenerateInstr(STDOUT);
                         return true;
                     }
                     else
@@ -926,8 +964,12 @@ bool CParser::Scan(CLexer& token)
         GetToken(token);
         if ("(" == token.GetLexeme())
         {
-            SetTokenNeeded(true);
             PrintRule("\t<Scan> -> get ( <IDs> );\n", token);
+            GetToken(token);
+            SetTokenNeeded(false);
+
+            // *** USED FOR ERROR OF UNDECLARED IDENTIFIER BEING USED
+            CToken id; id.SetLexeme(token.GetLexeme());
             if(IDs(token))
             {
                 GetToken(token);
@@ -938,6 +980,23 @@ bool CParser::Scan(CLexer& token)
                     if (";" == token.GetLexeme())
                     {
                         SetTokenNeeded(true);
+                        // *** NEEDED FOR INSTRUCTION TABLE
+                        // *** NOT SURE IF THIS IS RIGHT, WILL ASSEMBLY KNOW
+                        //     HOW MANY VARIABLES TO GET BECUASE YOU CAN HAVE
+                        //     GET(MAX, i, otherVar) WOULD IT KNOW TO GET 3
+                        //     VALUES?
+                        GenerateInstr(STDIN);
+                        try
+                        {
+                            GenerateInstr(POPM,
+                   std::to_string(m_symbolTable.GetMemAddr(id.GetLexeme())));
+                        }
+                        catch(const Error_SymbolTable error)
+                        {
+                            // need to set the variable name correctly
+                            token.SetLexeme(id.GetLexeme());
+                            PrintError(error, token);
+                        }
                         return true;
                     }
                     else
@@ -973,6 +1032,10 @@ bool CParser::While(CLexer& token)
 {
     if ("WHILE" == token.GetLexeme())
     {
+        // *** ADDED TO KEEP TRACK OF INSTRUCTION TABLE ADDRESS AT CURRENT POINT (IN SOLUTION)
+        int addr = m_instrTable.GetCurIndex();
+        GenerateInstr(LABEL);
+        
         PrintRule("\t<Statement> -> <While>\n", token);
         SetTokenNeeded(true);
         GetToken(token);
@@ -988,6 +1051,10 @@ bool CParser::While(CLexer& token)
                     SetTokenNeeded(true);
                     if (Statement(token))
                     {
+                        // *** ADDED TO JUMP BACK TO TOP OF WHILE LOOP FOR
+                        //     INSTRUCTION TABLE (IN SOLUTION)
+                        GenerateInstr(JUMP, std::to_string(addr));
+                        m_instrTable.BackPatch(m_instrTable.GetCurIndex());
                         return true;
                     }
                     else
@@ -1029,8 +1096,13 @@ bool CParser::Condition(CLexer& token)
         {
             if (Relop(token))
             {
+                // *** NEED TO SAVE WHAT KIND OF RELOP FOUND MUST GENERATE AFTER
+                //     Expression() FOR INSTRUCTION TABLE (IN SOLUTION)
+                std::string savedLexeme = token.GetLexeme();
                 if (Expression(token))
                 {
+                    // *** NEEDED FOR INSTRUCTION TABLE (IN SOLUTION, DIFFERENT FORMAT)
+                    GenerateRelopInstr(savedLexeme);
                     return true;
                 }
                 else
@@ -1138,18 +1210,28 @@ bool CParser::ExpressionPrime(CLexer& token)
     {
         SetTokenNeeded(true);
         PrintRule("\t<Expression Prime> -> + <Term> <Expression Prime>\n", token);
-        if (Term(token) && ExpressionPrime(token))
+        if (Term(token))
         {
-            return true;
+            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
+            GenerateInstr(ADD);
+            if (ExpressionPrime(token))
+            {
+                return true;
+            }
         }
     }
     else if ("-" == token.GetLexeme())
     {
         SetTokenNeeded(true);
         PrintRule("\t<Expression Prime> -> - <Term> <Expression Prime>\n", token);
-        if (Term(token) && ExpressionPrime(token))
+        if (Term(token))
         {
-            return true;
+            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+            GenerateInstr(SUB);
+            if (ExpressionPrime(token))
+            {
+                return true;
+            }
         }
     }
     
@@ -1182,6 +1264,9 @@ bool CParser::TermPrime(CLexer& token)
         SetTokenNeeded(true);
         PrintRule("\t<Term Prime> -> * <Factor> <Term Prime>\n", token);
         Factor(token);
+        
+        //*** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
+        GenerateInstr(MUL);
         TermPrime(token);
         return true;
     }
@@ -1190,6 +1275,9 @@ bool CParser::TermPrime(CLexer& token)
         SetTokenNeeded(true);
         PrintRule("\t<Term Prime> -> / <Factor> <Term Prime>\n", token);
         Factor(token);
+        
+        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+        GenerateInstr(DIV);
         TermPrime(token);
         return true;
     }
@@ -1203,19 +1291,28 @@ bool CParser::TermPrime(CLexer& token)
 
 bool CParser::Factor(CLexer& token)
 {
-    PrintRule("\t<Factor> -> - <Primary> | <Primary>\n", token);
+    PrintRule("\t<Factor> -> -<Primary> | <Primary>\n", token);
     
     GetToken(token);
     if ("-" == token.GetLexeme())
     {
         SetTokenNeeded(true);
-        GetToken(token);
-        return Primary(token);
+        if (Primary(token))
+        {
+            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE INSIDE PRIMARY
+            //      WHICH IS ACTUALLY USED TO CHECK FOR ID (IN SOLUTION BUT NOT RIGHT)
+            return true;
+        }
     }
     else
     {
         SetTokenNeeded(false);
-        return Primary(token);
+        if (Primary(token))
+        {
+            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE INSIDE PRIMARY
+            //      WHICH IS ACTUALLY USED TO CHECK FOR ID (IN SOLUTION BUT NOT RIGHT)
+            return true;
+        }
     }
     
     return false;
@@ -1224,19 +1321,41 @@ bool CParser::Factor(CLexer& token)
 
 bool CParser::Primary(CLexer& token)
 {
-    // we already called GetToken(token) in Factor function
-    //  because we had to check if there was a - or not so we
-    //  dont do it here
+    //store the last token to see if its a -
+    std::string lexeme = token.GetLexeme();
+    
+    GetToken(token);
     if (IDENTIFIER == token.GetTokenType())
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Identifier> <Identifier Prime>\n", token);
+        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION BUT WRONG PLACE)
+        try
+        {
+            GenerateInstr(PUSHM,
+                   std::to_string(m_symbolTable.GetMemAddr(token.GetLexeme())));
+        }
+        catch(const Error_SymbolTable error)
+        {
+            PrintError(error, token);
+        }
+
         return IdentifierPrime(token);
     }
     else if (INT_VALUE == token.GetTokenType())
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Integer>\n", token);
+        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+        if ("-" == lexeme)
+        {
+            lexeme = lexeme + token.GetLexeme();
+            GenerateInstr(PUSHI, lexeme);
+        }
+        else
+        {
+            GenerateInstr(PUSHI, token.GetLexeme());
+        }
         return true;
     }
     else if ("(" == token.GetLexeme())
@@ -1273,12 +1392,16 @@ bool CParser::Primary(CLexer& token)
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> true\n", token);
+        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+        GenerateInstr(PUSHI, std::to_string(1));
         return true;
     }
     else if ("FALSE" == token.GetLexeme())
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> false\n", token);
+        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
+        GenerateInstr(PUSHI, std::to_string(0));
         return true;
     }
     
@@ -1531,7 +1654,6 @@ void CParser::PrintExpTokenType(const CLexer& token)
 
 void CParser::PrintError(const Error_CParser error, CLexer& token)
 {
-
     long long colmNum = 0;
     if (token.GetColmNum() > 0)
     {
@@ -1608,9 +1730,15 @@ void CParser::PrintError(const Error_CParser error, CLexer& token)
                 PrintToken(token);
                 break;
                 
+            case FUNCTION_USED:
+                std::cout << "RAT18S error: " << token.GetLineNum() << ":"
+                << colmNum << ": function declarations are not permitted "
+                << std::endl;
+                break;
+                
             default:
                 std::cout << "RAT18S error: " << token.GetLineNum() << ":"
-                << colmNum << ": unknown error occured " << std::endl;
+                << colmNum << ": unknown parser error occured" << std::endl;
                 std::cout << "\t";
                 PrintToken(token);
                 break;
@@ -1693,5 +1821,36 @@ void CParser::PrintToken(const CLexer& token)
 }
 
 
+void CParser::GenerateRelopInstr(const std::string savedLexeme)
+{
+    if ("==" == savedLexeme)
+    {
+        GenerateInstr(EQU);
+    }
+    else if ("^=" == savedLexeme)
+    {
+        GenerateInstr(NEQ);
+    }
+    else if (">" == savedLexeme)
+    {
+        GenerateInstr(GRT);
+    }
+    else if ("<" == savedLexeme)
+    {
+        GenerateInstr(LES);
+    }
+    else if ("=>" == savedLexeme)
+    {
+        GenerateInstr(GEQ);
+    }
+    else if ("=<" == savedLexeme)
+    {
+        GenerateInstr(LEQ);
+    }
+
+    // need to push index of instruction we want not the instruction number
+    m_instrTable.PushJumpStack(m_instrTable.GetCurIndex()-1);
+    GenerateInstr(JUMPZ);
+}
 
 

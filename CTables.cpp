@@ -10,8 +10,9 @@
 
 
 //============================ CSymbolTable ====================================
-CSymbolTable::CSymbolTable(): m_curIndex(0), m_curMemAddr(2000), m_error(NONE),
-                              m_recVarTypeUsed(NO_TYPE), m_declaringVar(false)
+CSymbolTable::CSymbolTable(): m_curMemAddr(2000), m_recVarTypeUsed(NO_TYPE),
+                              m_error(ST_NONE), m_curIndex(0),
+                              m_declaringVar(false)
 {
     for (int i = 0; i < SYMBOL_TABLE_SIZE; i++)
     {
@@ -30,8 +31,15 @@ void CSymbolTable::Insert(const CToken& variable)
         SetVarName(variable.GetLexeme(), GetCurIndex());
         SetMemAddr(GetCurMemAddr(), GetCurIndex());
         SetVarType(GetRecVarTypeUsed(), GetCurIndex());
+        if (GetVarTypeStr(GetCurIndex()) == VariableType[NO_TYPE])
+        {
+            SetError(ST_UNDECLARED);
+            throw GetError();
+        }
+        
         SetCurIndex(GetCurIndex()+1);
         SetCurMemAddr(GetCurMemAddr()+1);
+        
     }
     else
     {
@@ -39,7 +47,7 @@ void CSymbolTable::Insert(const CToken& variable)
         //  a variable instance then throw error
         if (IsDeclaringVar())
         {
-            SetError(REDECLARATION);
+            SetError(ST_REDECLARATION);
             throw GetError();
         }
     }
@@ -82,6 +90,20 @@ void CSymbolTable::List() const
 }
 
 
+void CSymbolTable::SetRecVarTypeUsed(const VariableTypes varType)
+{
+    if (varType == REAL)
+    {
+        SetError(ST_REAL_USED);
+        throw GetError();
+    }
+    else
+    {
+        m_recVarTypeUsed = varType;
+    }
+}
+
+
 bool CSymbolTable::LookUp(const CToken& variable) const
 {
     std::string varName = variable.GetLexeme();
@@ -99,9 +121,9 @@ bool CSymbolTable::LookUp(const CToken& variable) const
 
 bool CSymbolTable::LookUp(const std::string varName, int& index) const
 {
-    for (int i = 0; i < GetCurIndex(); i++)
+    for (index = 0; index < GetCurIndex(); index++)
     {
-        if (varName == GetVarName(i))
+        if (varName == GetVarName(index))
         {
             return true;
         }
@@ -145,20 +167,13 @@ int CSymbolTable::GetMemAddr(const std::string varName)
     }
     else
     {
-        SetError(UNDECLARED);
+        SetError(ST_UNDECLARED);
         throw GetError();
     }
     
     //*** NOTE: SHOULD NEVER OCCUR
     return -1;
 }
-
-
-void CSymbolTable::SetVarTypeUsed(const VariableTypes varTypeUsed)
-{
-    m_recVarTypeUsed = varTypeUsed;
-}
-
 
 void CSymbolTable::SetVarName(const std::string varName, const int indexNum)
 {
@@ -170,16 +185,7 @@ void CSymbolTable::SetVarName(const std::string varName, const int indexNum)
 
 void CSymbolTable::SetMemAddr(const int memAddr, const int indexNum)
 {
-//    //*** NOTE: SHOULD NEVER set memAddr to a memory address less than 2000
-//    if (memAddr >= 2000)
-//    {
         m_table[indexNum].m_memAddr = memAddr;
-//    }
-//    else
-//    {
-//        SetError(MEM_OUT_OF_RANGE);
-//        throw GetError();
-//    }
 }
 
 
@@ -197,45 +203,79 @@ void CSymbolTable::PrintError(const Error_SymbolTable error,
     {
         colmNum = token.GetColmNum() - token.CalcErrorOffset();
     }
-    
+
     std::cout << std::endl;
+    int index = 0;
     
     switch(error)
     {
-        case REDECLARATION:
+        case ST_REAL_USED:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": declarations of type reals are not permitted"
+            << std::endl;
+            break;
+            
+        case ST_REDECLARATION:
             std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
             << colmNum << ": redeclaration of " << token.GetLexeme()
             << std::endl;
             break;
             
-        case UNDECLARED:
-        case MISMATCH:
-        case MEM_OUT_OF_RANGE:
-        case MAX_RANGE_REACHED:
+        case ST_UNDECLARED:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": undeclared identifier " << token.GetLexeme()
+            << std::endl;
+            break;
+            
+        case ST_OPERATION_MISMATCH:
+            LookUp(token.GetLexeme(), index);
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": operation type mismatch of " << token.GetLexeme()
+            << " is of type " << GetVarType(index) << std::endl;
+            break;
+            
+        case ST_MEM_OUT_OF_RANGE:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": invalid symbol table memory address" << std::endl;
+            break;
+            
+        case ST_MAX_RANGE_REACHED:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": max symbol table memory reached" << std::endl;
+            break;
+            
         default:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": unknown symbol table error occured" << std::endl;
             break;
     }
 }
 
 
 //============================ CInstructionTable ===============================
-CInstructionTable::CInstructionTable() : m_curIndex(0)
+CInstructionTable::CInstructionTable() : m_curIndex(1), m_error(IT_NONE)
 {
     for (int i = 0; i < INSTRUCTION_TABLE_SIZE; i++)
     {
         SetAddress(0, i);
         SetInstr("NONE", i);
-        SetOperand(0, i);
+        SetOperand("", i);
     }
 }
 
 
-void CInstructionTable::GenerateInstr(const InstructionType instType,
-                                      const int addr)
+void CInstructionTable::BackPatch(const int jumpAddr)
 {
-    SetAddress(GetCurIndex()+1, GetCurIndex());
-    SetInstr(GetInstrStr(instType), GetCurIndex());
-    SetOperand(addr, GetCurIndex());
+    int addr = PopJumpStack();
+    SetOperand(std::to_string(jumpAddr), addr);
+}
+
+void CInstructionTable::GenerateInstr(const InstructionType instType,
+                                      const std::string addr)
+{
+    SetInstr(GetInstrStr(instType), GetCurIndex()-1);
+    SetAddress(GetCurIndex(), GetCurIndex()-1);
+    SetOperand(addr, GetCurIndex()-1);
     SetCurIndex(GetCurIndex()+1);
 }
 
@@ -258,10 +298,51 @@ void CInstructionTable::SetInstr(const std::string instr, const int index)
 }
 
 
-void CInstructionTable::SetOperand(const int operand, const int index)
+void CInstructionTable::SetOperand(const std::string operand, const int index)
 {
+    if((GetInstr(index) == Instructions[POPM] ||
+        GetInstr(index) == Instructions[PUSHM]) &&
+       std::stoi(operand) < 2000)
+    {
+        //*** NEED TO THROW ERROR
+        std::cout << "ERRORORORORO SetOperand OUT OF INDEX RANGE" << std::endl;
+        std::cout << "m_instrTable[" << index+1 << "]" << std::endl;
+    }
     m_table[index].operand = operand;
 }
+
+void CInstructionTable:: PrintError(const Error_InstrTable error,
+                                    const CLexer& token) const
+{
+    long long colmNum = 0;
+    if (token.GetColmNum() > 0)
+    {
+        colmNum = token.GetColmNum() - token.CalcErrorOffset();
+    }
+    
+    std::cout << std::endl;
+    
+    switch(error)
+    {
+        case IT_MEM_OUT_OF_RANGE:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": invalid symbol table memory address" << std::endl;
+            break;
+            
+        case IT_MAX_RANGE_REACHED:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": max symbol table memory reached" << std::endl;
+            break;
+            
+        default:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": unknown instruction table error occured"
+            << std::endl;
+            break;
+    }
+    
+}
+
 
 void CInstructionTable::PrintTable() const
 {
@@ -272,9 +353,16 @@ void CInstructionTable::PrintTable() const
         {
             for (int i = 0; i < GetCurIndex(); i++)
             {
-                std::cout << GetAddress(i) << "\t\t"
-                          << GetInstr(i)   << "\t\t"
-                          << GetOperand(i) << "\n";
+                if ("NONE" != GetInstr(i))
+                {
+                    std::cout << GetAddress(i) << "\t\t"
+                              << GetInstr(i)   << "\t\t";
+                    if ("" != GetOperand(i))
+                    {
+                        std::cout << GetOperand(i);
+                    }
+                    std::cout << "\n";
+                }
             }
         }
         else
@@ -284,5 +372,16 @@ void CInstructionTable::PrintTable() const
     }
 }
 
+int CInstructionTable::PopJumpStack()
+{
+    int topValue = m_jumpStack.top();
+    m_jumpStack.pop();
+    return topValue;
+}
+
+void CInstructionTable::PushJumpStack(const int addr)
+{
+    m_jumpStack.push(addr);
+}
 
 

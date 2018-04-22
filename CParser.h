@@ -24,7 +24,8 @@ enum Error_CParser
     EXPECTED_RELOP,
     EXPECTED_SEPARATOR,
     EXPECTED_STATEMENT,
-    EXPECTED_QUALIFIER
+    EXPECTED_QUALIFIER,
+    FUNCTION_USED       //NO FUNCTIONS ARE ALLOWED FOR ASSIGNMENT PART 3
 };
 
 // a code used to help user know what type of token was expected (missing or
@@ -104,8 +105,12 @@ class CParser
         bool Empty(CLexer& token);                       // rule 29
     
         // SYMBOL TABLE FUNCTIONS
-        void PrintSymbolTable() const {m_symbolTable.List();}
-        void PrintInstrTable() const {m_instrTable.PrintTable();}
+        void PrintSymbolTable() const
+                                    { if (!ErrorThrown()) m_symbolTable.List();}
+    
+        // INSTRUCTION TABLE FUCNTIONS
+        void PrintInstrTable() const
+                               { if (!ErrorThrown()) m_instrTable.PrintTable();}
     
     private:
         bool TokenNeeded() {return m_needToken;}
@@ -114,7 +119,7 @@ class CParser
         void SetError(const Error_CParser error, const Exp_Token_Type expToken);
         void SetErrorType(const Error_CParser error) {m_Error = error;}
         void SetErrorThrown(const bool thrown) {m_ErrorThrown = thrown;}
-        bool ErrorThrown() {return m_ErrorThrown;}
+        bool ErrorThrown() const {return m_ErrorThrown;}
         Error_CParser GetErrorType() {return m_Error;}
         void SetErrorExpTokenType(const Exp_Token_Type expToken)
                          {m_Error_Exp_Token = expToken;}
@@ -131,8 +136,20 @@ class CParser
         void InsertVariable(const CToken& var) {m_symbolTable.Insert(var);}
         void SetDeclaringVar(const bool state)
                                         {m_symbolTable.SetDeclaringVar(state);}
-        void PrintError(const Error_SymbolTable error, const CLexer& token)const
-                                    {m_symbolTable.PrintError(error, token);}
+        void PrintError(const Error_SymbolTable error, const CLexer& token)
+            { if (!ErrorThrown()) m_symbolTable.PrintError(error, token);
+                SetErrorThrown(true); }
+    
+        // INSTRUCTION TABLE PRIVATE MEMBER FUNCTIONS
+        void GenerateInstr(const InstructionType instType,
+                           const std::string addr = "")
+                                   {m_instrTable.GenerateInstr(instType, addr);}
+        void GenerateRelopInstr(const std::string savedLexeme);
+        void PrintError(const Error_InstrTable error, const CLexer& token)
+            {if (!ErrorThrown()) m_instrTable.PrintError(error, token);
+                SetErrorThrown(true);}
+    
+
     
         bool m_needToken;
         bool m_ErrorThrown;

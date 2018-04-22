@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
     }
     
     compiler.Parse();
-    compiler.PrintInstructionTable(); std::cout << "\n\n";
+    compiler.PrintInstructionTable();   std::cout << "\n\n";
     compiler.PrintSymbolTable();
     
     
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     std::cout << std::endl;
     std::cout << "PROGRAM COMPLETE" << std::endl;
     std::cout << std::endl;
-// *** TESTING ONLNY
+// *** TESTING ONLY
     
     std::cout << std::endl;
     

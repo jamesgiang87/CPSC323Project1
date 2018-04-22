@@ -1,0 +1,27 @@
+function func[inn:int]
+{
+	return 5.5;
+}
+
+%%
+int i, max, sum;
+real i;
+boolean i;
+sum = 0;
+i = 1;
+
+if (true)
+{
+	return 7.77;
+}
+
+get(blah);
+get ( max);
+
+while (i <  max)
+{
+    sum = sum + i;
+    i = i + 1;
+}
+
+put (sum + max);
