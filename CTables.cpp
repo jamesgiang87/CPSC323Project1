@@ -254,6 +254,12 @@ void CSymbolTable::PrintError(const Error_SymbolTable error,
             << colmNum << ": no boolean variables allowed in arithmetic "
             << "operations" << std::endl;
             break;
+        
+        case ST_BOOLEAN_EXPECTED:
+            std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
+            << colmNum << ": boolean must be assigned true or false"
+            << std::endl;
+            break;
             
         case ST_REAL_USED:
             std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
@@ -472,7 +478,7 @@ void CInstructionTable::PrintTable()
     {
         if (0 != GetCurIndex())
         {
-            for (int i = 0; i < GetCurIndex(); i++)
+            for (int i = 0; i < GetCurIndex()-1; i++)
             {
                 if ("NONE" != GetInstr(i))
                 {

@@ -3,10 +3,6 @@
 // Class: CPSC 323 Compilers & Languages
 // File: CLexer.cpp
 
-//*** NEED TO BE ANSWERED QUESTIONS LEAD WITH ***
-// ALL FUNCTIONS ARE LISTED IN ALPHABETICAL ORDER REGARDLESS OF PUBLIC/PRIVATE SCOPE
-// BUT ALL FUNCTIONS ARE RELEVANT TO TASK IN COMPILER (Ex Lexical Analysis, Syntax Analysis..)
-
 #include <cctype>
 #include <fstream>
 #include <iostream>

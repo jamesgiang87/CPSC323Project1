@@ -1,36 +1,3 @@
-        !function func[inn:int]
-        {
-            return 5.5;
-        }
-        !
-
 %%
-
-int i, max, sum;
-        !real i;!
-        !boolean i;!
-boolean myBool;
-!myBool = true + false;!
-sum = 0;
-i = 1;
-
-if (true == true)
-{
-    return 5;
-!    return 7.77;!
-}
-endif
-
-!get(blah);!
-!get(max, sum, i);!
-get (max);
-
-while (i <  max)
- {
-    sum = sum + i;
-    i = i + 1;
-}
-
-put (sum + max);
-
-
+int i,a,b,c,x;
+x = a + b * c;

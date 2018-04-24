@@ -1,4 +1,4 @@
-//Date: 3/24/2018
+// Date: 3/24/2018
 // Author: Austin Blanke
 // Class: CPSC 323 Compilers & Languages
 // File: Cparser.h
@@ -138,6 +138,7 @@ class CParser
                                     {m_symbolTable.SetExpVarTypeUsed(varType);}
         void SetRecVariableType(const VariableTypes varType)
                                     {m_symbolTable.SetRecVarTypeUsed(varType);}
+        bool IsDeclaringVar() const {return m_symbolTable.IsDeclaringVar();}
         std::string GetExpVariableTypeStr() const
                                 {return m_symbolTable.GetExpVarTypeUsedStr();}
         VariableTypes GetVariableType(const std::string lexeme)

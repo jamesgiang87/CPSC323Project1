@@ -43,6 +43,3 @@ private:
 };
 
 #endif    // END OF RAT18Scompiler_HEADER
-
-
-

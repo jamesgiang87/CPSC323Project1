@@ -1,6 +1,7 @@
 // Date: 2/17/18
+// Author: Austin Blanke
 // Class: CPSC 323 Compilers and Languages
-// File: main.cpp
+// File: runCompiler.cpp
 
 #include "RAT18S_Compiler.h"
 #include "CLexer.h"
@@ -48,5 +49,3 @@ int main(int argc, char* argv[])
     
     return 0;
 }
-
-

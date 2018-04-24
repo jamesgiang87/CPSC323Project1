@@ -3,17 +3,14 @@
 // Class: CPSC 323 Compilers & Languages
 // File: CTables.h
 
-//*** NEED TO CHECK FOR NO BOOLEAN ARITHMETIC
-//*** NEED TO MAKE SURE TYPE IS CORRECT IN ARITHMETIC
-
-//*** ASK TEACHER NOT SURE IF - <PRIMARY> means negative value... if so how do we do this for
-//    EXPRESSION
-//*** ASK TEACHER NEED TO MAKE SURE POPM FOR STDIN FOR EACH VARIABLE (IF CAN HAVE MULTIPLE VARIABLES IN GET(var, ovar)
-//    SO FAR ONLY ONE VARIABLE HAS A POPM if you have Get(i, max, sum) only POPM for i ex. POPM 2000
-//*** ASK TEACHER DO WE NEED TO CHECK FOR LITERAL REAL VALUES SUCH AS return 7.77 or will assembly
-//    know to make it 7. Can find place to error check else if (REAL_VALUE == token.GetTokenType()) line 1389
-//*** ASK TEACHER IS BOOLEAN ALLOWED TO BE ASSIGNED 0 or 1? if so what do we do for >1 values and <1 values?
-//    FIND HOW TO SET ERROR IN CParser.cpp   else if (INT_VALUE == token.GetTokenType()) line 1349
+//*** WHAT DO YOU MEAN BY MODIFY PARSER TO NOT INCLUDE FUNCTIONS AND REALS? IS ISSUEING
+//    ERROR FOR THOSE OK? OR NEED TO REMOVE THEM?
+//*** THE VIRTUAL MACHINE WILL USE THE STACK WE DO NOT NEED TO IMPLEMENT THAT CORRECT?
+//*** ASK TEACHER NOT SURE FOR - <PRIMARY> EXPRESSION CAN WE DO PUSHI -1 and then MUL?
+//    IS THAT ALLOWED? YOU DONT GIVE ANY EXAMPLES
+//*** ASK TEACHER NEED TO HAVE MULTIPLE STDIN TO GET MULTIPLE VALUES. SO ONE STDIN GETS ONLY ONE VALUE FROM
+//    INPUT
+//*** -true or -false should be an error because boolean arithmetic?
 //*** NEED TO MAKE SURE THAT ERRORS ARE CAUGHT FOR THESE FUNCTIONS IN CParser.cpp
 
 #ifndef CTables_HEADER
@@ -22,9 +19,9 @@
 #include "CLexer.h"
 #include <stack>
 
-const int SYMBOL_TABLE_SIZE      = 30;
-const int INSTRUCTION_TABLE_SIZE = 30;
-const bool PRINT_SYMBOL_TABLE = true;
+const int  SYMBOL_TABLE_SIZE       = 30;
+const int  INSTRUCTION_TABLE_SIZE  = 30;
+const bool PRINT_SYMBOL_TABLE      = true;
 const bool PRINT_INSTRUCTION_TABLE = true;
 
 // keeps track of what variable types we have found (when declared)
@@ -42,6 +39,7 @@ enum Error_SymbolTable
 {
         ST_NONE,
         ST_BOOLEAN_ARITHMETIC,  // there is no boolean arithmetic allowed
+        ST_BOOLEAN_EXPECTED,    // a true or false token expected
         ST_REAL_USED,           // reals cannot be used for this assignment
         ST_REDECLARATION,       // variable is being redeclared
         ST_UNDECLARED,          // variable used when not declared
@@ -76,6 +74,8 @@ class CSymbolTable
         VariableTypes GetVarType(const std::string varName);
         VariableTypes GetExpVarTypeUsed() {return m_ExpVarTypeUsed;}
         std::string GetExpVarTypeUsedStr() const;
+        bool IsDeclaringVar() const {return m_declaringVar;}
+
         int GetMemAddr(const std::string varName);
     
     
@@ -103,8 +103,6 @@ class CSymbolTable
     
         void SetError(const Error_SymbolTable error) {m_error = error;}
         Error_SymbolTable GetError() {return m_error;}
-    
-        bool IsDeclaringVar() const {return m_declaringVar;}
     
     // PRIVATE DATA MEMBERS
         STI m_table[SYMBOL_TABLE_SIZE]; // stores all table data
