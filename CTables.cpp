@@ -8,11 +8,11 @@
 #include <iomanip>
 #include <stdlib.h>
 
-
 //============================ CSymbolTable ====================================
-CSymbolTable::CSymbolTable(): m_curMemAddr(2000), m_recVarTypeUsed(NO_TYPE),
-                              m_error(ST_NONE), m_curIndex(0),
-                              m_declaringVar(false), m_ExpVarTypeUsed(NO_TYPE)
+CSymbolTable::CSymbolTable(): m_curMemAddr(SYMBOL_TABLE_START_ADDR),
+                              m_curIndex(0), m_recVarTypeUsed(NO_TYPE),
+                              m_error(ST_NONE), m_declaringVar(false),
+                              m_ExpVarTypeUsed(NO_TYPE)
 {
     for (int i = 0; i < SYMBOL_TABLE_SIZE; i++)
     {
@@ -21,7 +21,6 @@ CSymbolTable::CSymbolTable(): m_curMemAddr(2000), m_recVarTypeUsed(NO_TYPE),
         SetVarType(NO_TYPE, GetCurIndex());
     }
 }
-
 
 void CSymbolTable::Insert(const CToken& variable)
 {
@@ -60,7 +59,6 @@ void CSymbolTable::SetExpVarTypeUsed(const VariableTypes varType)
 
 void CSymbolTable::List() const
 {
-    //*** MAYBE FORMAT THIS USING SETW and LONGEST IDENTIFIER TO SPACE NEATLY
     if (PRINT_SYMBOL_TABLE)
     {
         //get the length of the largest variable
@@ -93,7 +91,6 @@ void CSymbolTable::List() const
     }
 }
 
-
 void CSymbolTable::SetRecVarTypeUsed(const VariableTypes varType)
 {
     if (varType == REAL)
@@ -106,7 +103,6 @@ void CSymbolTable::SetRecVarTypeUsed(const VariableTypes varType)
         m_recVarTypeUsed = varType;
     }
 }
-
 
 bool CSymbolTable::LookUp(const CToken& variable) const
 {
@@ -122,7 +118,6 @@ bool CSymbolTable::LookUp(const CToken& variable) const
     return false;
 }
 
-
 bool CSymbolTable::LookUp(const std::string varName, int& index) const
 {
     for (index = 0; index < GetCurIndex(); index++)
@@ -135,30 +130,24 @@ bool CSymbolTable::LookUp(const std::string varName, int& index) const
     return false;
 }
 
-
 std::string CSymbolTable::GetVarName(const int indexNum) const
 {
     return m_table[indexNum].m_varName;
-    //return m_table[GetCurIndex()].m_varName;
 }
-
 
 VariableTypes CSymbolTable::GetVarType(const int indexNum) const
 {
     return m_table[indexNum].m_varType;
 }
 
-
 std::string CSymbolTable::GetVarTypeStr(const int indexNum) const
 {
     return VariableType[m_table[indexNum].m_varType];
 }
 
-
 int CSymbolTable::GetMemAddr(const int indexNum) const
 {
     return m_table[indexNum].m_memAddr;
-    //return m_table[GetCurIndex()].m_memAddr;
 }
 
 VariableTypes CSymbolTable::GetVarType(const std::string varName)
@@ -179,7 +168,6 @@ std::string CSymbolTable::GetExpVarTypeUsedStr() const
 {
     return VariableType[m_ExpVarTypeUsed];
 }
-
 
 int CSymbolTable::GetMemAddr(const std::string varName) 
 {
@@ -202,22 +190,24 @@ int CSymbolTable::GetMemAddr(const std::string varName)
         SetError(ST_UNDECLARED);
         throw GetError();
     }
-    
-    //*** NOTE: SHOULD NEVER OCCUR
-    return -1;
 }
 
 void CSymbolTable::SetVarName(const std::string varName, const int indexNum)
 {
-    //*** NOTE: SHOULD NEVER set m_varName to a variable name thats already
-    //          in the table
-    m_table[indexNum].m_varName = varName;
+    if (GetCurIndex() < SYMBOL_TABLE_SIZE)
+    {
+        m_table[indexNum].m_varName = varName;
+    }
+    else
+    {
+        SetError(ST_MAX_RANGE_REACHED);
+        throw GetError();
+    }
 }
-
 
 void CSymbolTable::SetMemAddr(const int memAddr, const int indexNum)
 {
-    if (memAddr >= 2000)
+    if (memAddr >= SYMBOL_TABLE_START_ADDR)
     {
         m_table[indexNum].m_memAddr = memAddr;
     }
@@ -228,12 +218,18 @@ void CSymbolTable::SetMemAddr(const int memAddr, const int indexNum)
     }
 }
 
-
 void CSymbolTable::SetVarType(const VariableTypes varType, const int indexNum)
 {
-    m_table[indexNum].m_varType = varType;
+    if (indexNum < SYMBOL_TABLE_SIZE)
+    {
+        m_table[indexNum].m_varType = varType;
+    }
+    else
+    {
+        SetError(ST_MAX_RANGE_REACHED);
+        throw GetError();
+    }
 }
-
 
 void CSymbolTable::PrintError(const Error_SymbolTable error,
                               const CLexer& token) const
@@ -312,7 +308,6 @@ void CSymbolTable::PrintError(const Error_SymbolTable error,
     }
 }
 
-
 //============================ CInstructionTable ===============================
 CInstructionTable::CInstructionTable() : m_curIndex(1), m_error(IT_NONE)
 {
@@ -323,7 +318,6 @@ CInstructionTable::CInstructionTable() : m_curIndex(1), m_error(IT_NONE)
         SetOperand("", i);
     }
 }
-
 
 void CInstructionTable::BackPatch(const int jumpAddr)
 {
@@ -347,7 +341,6 @@ void CInstructionTable::GenerateInstr(const InstructionType instType,
         throw GetError();
     }
 }
-
 
 std::string CInstructionTable::GetInstrStr(const int instrNum)
 {
@@ -388,6 +381,7 @@ std::string CInstructionTable::GetInstr(const int index)
         throw GetError();
     }
 }
+
 std::string CInstructionTable::GetOperand(const int index) 
 {
     if (index <= INSTRUCTION_TABLE_SIZE)
@@ -414,7 +408,6 @@ void CInstructionTable::SetAddress(const int addr, const int index)
     }
 }
 
-
 void CInstructionTable::SetInstr(const std::string instr, const int index)
 {
     if (index <= INSTRUCTION_TABLE_SIZE)
@@ -427,7 +420,6 @@ void CInstructionTable::SetInstr(const std::string instr, const int index)
         throw GetError();
     }
 }
-
 
 void CInstructionTable::SetOperand(const std::string operand, const int index)
 {
@@ -455,10 +447,9 @@ void CInstructionTable:: PrintError(const Error_InstrTable error,
     
     switch(error)
     {
-            
         case IT_MAX_RANGE_REACHED:
             std::cout  << "RAT18S error: " << token.GetLineNum() << ":"
-            << colmNum << ": max symbol table memory reached" << std::endl;
+            << colmNum << ": max instruction table memory reached" << std::endl;
             break;
             
         default:
@@ -473,7 +464,6 @@ void CInstructionTable:: PrintError(const Error_InstrTable error,
 
 void CInstructionTable::PrintTable() 
 {
-    //*** NEED TO FORMAT BETTER USING SETW
     if (PRINT_INSTRUCTION_TABLE)
     {
         if (0 != GetCurIndex())
@@ -510,5 +500,4 @@ void CInstructionTable::PushJumpStack(const int addr)
 {
     m_jumpStack.push(addr);
 }
-
 

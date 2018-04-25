@@ -12,7 +12,7 @@ int i, max, sum;
 boolean myBool;
 !myBool = true + false;!
 !myBool = -true;!
-
+!sum = -(0 * 10);!
 sum = 0;
 i = 1;
 

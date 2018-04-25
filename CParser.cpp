@@ -115,7 +115,6 @@ bool CParser::Function(CLexer& token)
     GetToken(token);
     if ("FUNCTION" == token.GetLexeme())
     {
-        //*** RULE FOR ASSIGNMENT 3 THAT NOT FUNCTIONS CAN BE MADE
         PrintError(FUNCTION_USED, token);
         
         PrintRule("\t<Function Definitions> -> <Function>", token);
@@ -233,8 +232,6 @@ bool CParser::Parameter(CLexer& token)
     
     if (IDs(token))
     {
-        // *** already performed token.token in IDs to check if
-        //  there was a , (really checked in IDsPrime)
         try
         {
             GetToken(token);
@@ -273,7 +270,6 @@ bool CParser::Qualifier(CLexer& token)
     GetToken(token);
     if ("INT" == token.GetLexeme())
     {
-        //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
         SetRecVariableType(INT);
         SetDeclaringVar(true);
         SetTokenNeeded(true);
@@ -282,7 +278,6 @@ bool CParser::Qualifier(CLexer& token)
     }
     else if ("BOOLEAN" == token.GetLexeme())
     {
-        //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
         SetRecVariableType(BOOLEAN);
         SetDeclaringVar(true);
         SetTokenNeeded(true);
@@ -291,7 +286,6 @@ bool CParser::Qualifier(CLexer& token)
     }
     else if ("REAL"    == token.GetLexeme())
     {
-        //*** ADDED FOR SYMBOL TABLE (ADDING VARIABLES TO TABLE)
         try
         {
             SetRecVariableType(REAL);
@@ -392,7 +386,6 @@ bool CParser::DeclarationList(CLexer& token)
     {
         if (Declaration(token))
         {
-            //*** NEXT TWO FUNCTIONS ADDED FOR SYMBOL TABLE (TO ADD VARS)
             SetRecVariableType(NO_TYPE);
             SetDeclaringVar(false);
             
@@ -465,7 +458,6 @@ bool CParser::IDs(CLexer& token)
     GetToken(token);
     if (IDENTIFIER == token.GetTokenType())
     {
-        //*** ADDED TO INSERT VARIABLES INTO SYMBOL TABLE
         try
         {
             // if we are declaring a variable insert it into the symbol table
@@ -475,7 +467,6 @@ bool CParser::IDs(CLexer& token)
             }
             else
             {
-                //*** NEEDED FOR POPM IN GET() INSTRUCTION
                 GenerateInstr(STDIN);
                 GenerateInstr(POPM,
                    std::to_string(m_symbolTable.GetMemAddr(token.GetLexeme())));
@@ -618,8 +609,6 @@ bool CParser::Compound(CLexer& token)
             GetToken(token);
             if ("}" == token.GetLexeme())
             {
- //*** NOT SURE IF NEEDED               // *** NEEDED FOR INSTRUCTION TABLE (NEEDED TO FIND IN SOLUTION)
-//                m_instrTable.BackPatch(m_instrTable.GetCurIndex());
                 SetTokenNeeded(true);
                 return true;
             }
@@ -645,7 +634,6 @@ bool CParser::Assign(CLexer& token)
 {
     if (IDENTIFIER == token.GetTokenType())
     {
-        // *** USED FOR TO STORE INSTRUCTION (IN SOLUTION)
         CToken id; id.SetLexeme(token.GetLexeme());
         try
         {
@@ -665,7 +653,6 @@ bool CParser::Assign(CLexer& token)
             PrintRule("\t<Assign> -> <Identifier> = <Expression>;\n", token);
             if (Expression(token))
             {
-                // *** USED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
                 try
                 {
                     GenerateInstr(POPM,
@@ -676,6 +663,10 @@ bool CParser::Assign(CLexer& token)
                 {
                     // saved the variable name that is undeclared
                     token.SetLexeme(id.GetLexeme());
+                    PrintError(error, token);
+                }
+                catch(const Error_InstrTable error)
+                {
                     PrintError(error, token);
                 }
                 
@@ -739,8 +730,6 @@ bool CParser::If(CLexer& token)
                     SetTokenNeeded(true);
                     if (Statement(token))
                     {
-                        // *** NEEDED FOR INSTRUCTION TABLE IN SOLUTION (didnt
-                        //     include addr = instr_address() because useless?
                         m_instrTable.BackPatch(m_instrTable.GetCurIndex());
                         
                         IfPrime(token);
@@ -838,7 +827,6 @@ bool CParser::IfPrime(CLexer& token)
             PrintRule("\t<If Prime> -> else <Statement>\n", token);
             if(Statement(token))
             {
-                // *** NEEDED FOR INSTRUCTION TABLE NOT IN SOLUTION
                 m_instrTable.BackPatch(m_instrTable.GetCurIndex());
                 return true;
             }
@@ -938,7 +926,6 @@ bool CParser::Print(CLexer& token)
                     {
                         SetTokenNeeded(true);
                         
-                        // *** NEEDED FOR INSTRUCTION TABLE (NEEDED TO FIND PART OF ASSIGNMENT)
                         try
                         {
                             GenerateInstr(STDOUT);
@@ -1000,7 +987,6 @@ bool CParser::Scan(CLexer& token)
             GetToken(token);
             SetTokenNeeded(false);
 
-            // *** USED FOR ERROR OF UNDECLARED IDENTIFIER BEING USED
             CToken id; id.SetLexeme(token.GetLexeme());
             if(IDs(token))
             {
@@ -1012,9 +998,6 @@ bool CParser::Scan(CLexer& token)
                     if (";" == token.GetLexeme())
                     {
                         SetTokenNeeded(true);
-                        // *** STDIN ASSEMBLY INSTRUCTION GENERATED IN IDS
-                        //     BECAUSE WE DONT KNOW HOW MANY IDENTIFIERS ARE
-                        //     PASSES
                         return true;
                     }
                     else
@@ -1050,7 +1033,6 @@ bool CParser::While(CLexer& token)
 {
     if ("WHILE" == token.GetLexeme())
     {
-        // *** ADDED TO KEEP TRACK OF INSTRUCTION TABLE ADDRESS AT CURRENT POINT (IN SOLUTION)
         int addr = m_instrTable.GetCurIndex();
         try
         {
@@ -1076,8 +1058,6 @@ bool CParser::While(CLexer& token)
                     SetTokenNeeded(true);
                     if (Statement(token))
                     {
-                        // *** ADDED TO JUMP BACK TO TOP OF WHILE LOOP FOR
-                        //     INSTRUCTION TABLE (IN SOLUTION)
                         try
                         {
                             GenerateInstr(JUMP, std::to_string(addr));
@@ -1128,12 +1108,9 @@ bool CParser::Condition(CLexer& token)
         {
             if (Relop(token))
             {
-                // *** NEED TO SAVE WHAT KIND OF RELOP FOUND MUST GENERATE AFTER
-                //     Expression() FOR INSTRUCTION TABLE (IN SOLUTION)
                 std::string savedLexeme = token.GetLexeme();
                 if (Expression(token))
                 {
-                    // *** NEEDED FOR INSTRUCTION TABLE (IN SOLUTION, DIFFERENT FORMAT)
                     try
                     {
                         GenerateRelopInstr(savedLexeme);
@@ -1247,7 +1224,6 @@ bool CParser::ExpressionPrime(CLexer& token)
     GetToken(token);
     if ("+" == token.GetLexeme())
     {
-        //*** NEEDED FOR BOOLEAN ARITHMETIC ERROR
         if (GetExpVariableTypeStr() == VariableType[BOOLEAN])
         {
             PrintError(ST_BOOLEAN_ARITHMETIC, token);
@@ -1256,7 +1232,6 @@ bool CParser::ExpressionPrime(CLexer& token)
         PrintRule("\t<Expression Prime> -> + <Term> <Expression Prime>\n", token);
         if (Term(token))
         {
-            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
             try
             {
                 GenerateInstr(ADD);
@@ -1274,7 +1249,6 @@ bool CParser::ExpressionPrime(CLexer& token)
     }
     else if ("-" == token.GetLexeme())
     {
-        //*** NEEDED FOR BOOLEAN ARITHMETIC ERROR
         if (GetExpVariableTypeStr() == VariableType[BOOLEAN])
         {
             PrintError(ST_BOOLEAN_ARITHMETIC, token);
@@ -1283,7 +1257,6 @@ bool CParser::ExpressionPrime(CLexer& token)
         PrintRule("\t<Expression Prime> -> - <Term> <Expression Prime>\n", token);
         if (Term(token))
         {
-            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
             try
             {
                 GenerateInstr(SUB);
@@ -1330,7 +1303,6 @@ bool CParser::TermPrime(CLexer& token)
         PrintRule("\t<Term Prime> -> * <Factor> <Term Prime>\n", token);
         Factor(token);
         
-        //*** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION)
         try
         {
             GenerateInstr(MUL);
@@ -1349,7 +1321,6 @@ bool CParser::TermPrime(CLexer& token)
         PrintRule("\t<Term Prime> -> / <Factor> <Term Prime>\n", token);
         Factor(token);
         
-        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
         try
         {
             GenerateInstr(DIV);
@@ -1379,8 +1350,6 @@ bool CParser::Factor(CLexer& token)
         SetTokenNeeded(true);
         if (Primary(token))
         {
-            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE INSIDE PRIMARY
-            //      WHICH IS ACTUALLY USED TO CHECK FOR ID (IN SOLUTION BUT NOT RIGHT)
             return true;
         }
     }
@@ -1389,8 +1358,6 @@ bool CParser::Factor(CLexer& token)
         SetTokenNeeded(false);
         if (Primary(token))
         {
-            // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE INSIDE PRIMARY
-            //      WHICH IS ACTUALLY USED TO CHECK FOR ID (IN SOLUTION BUT NOT RIGHT)
             return true;
         }
     }
@@ -1409,7 +1376,6 @@ bool CParser::Primary(CLexer& token)
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Identifier> <Identifier Prime>\n", token);
-        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (IN SOLUTION BUT WRONG PLACE)
         try
         {
             SetExpVarialeType(GetVariableType(token.GetLexeme()));
@@ -1437,7 +1403,6 @@ bool CParser::Primary(CLexer& token)
     {
         SetTokenNeeded(true);
         PrintRule("\t<Primary> -> <Integer>\n", token);
-        // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
         try
         {
             if (GetExpVariableTypeStr() != VariableType[BOOLEAN])
@@ -1469,11 +1434,17 @@ bool CParser::Primary(CLexer& token)
         PrintRule("\t<Primary> -> ( <Expression> )\n", token);
         if (Expression(token))
         {
-            // *** NEEDED TO CHECK IF EXPRESSION IS NEGATIVE
             if ("-" == lexeme)
             {
-                GenerateInstr(PUSHI, "-1");
-                GenerateInstr(MUL);
+                try
+                {
+                    GenerateInstr(PUSHI, "-1");
+                    GenerateInstr(MUL);
+                }
+                catch(const Error_InstrTable error)
+                {
+                    PrintError(error, token);
+                }
             }
             
             GetToken(token);
@@ -1516,16 +1487,13 @@ bool CParser::Primary(CLexer& token)
     }
     else if ("TRUE" == token.GetLexeme())
     {
-        // *** ADDED FOR SYMBOL TABLE TO CHECK BOOLEAN ARITHMETIC ERROR
         if (GetExpVariableTypeStr() == VariableType[BOOLEAN] ||
             GetExpVariableTypeStr() == VariableType[NO_TYPE])
         {
-            //*** ADDED BECAUSE CANT HAVE -TRUE
             if ("-" != lexeme)
             {
                 SetTokenNeeded(true);
                 PrintRule("\t<Primary> -> true\n", token);
-                // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
                 try
                 {
                     GenerateInstr(PUSHI, std::to_string(1));
@@ -1548,14 +1516,12 @@ bool CParser::Primary(CLexer& token)
     }
     else if ("FALSE" == token.GetLexeme())
     {
-        // *** ADDED FOR SYMBOL TABLE TO CHECK BOOLEAN ARITHMETIC ERROR
         if (GetExpVariableTypeStr() == VariableType[BOOLEAN])
         {
             if ("-" != lexeme)
             {
                 SetTokenNeeded(true);
                 PrintRule("\t<Primary> -> false\n", token);
-                // *** ADDED TO GENERATE INSTRUCTION FOR INSTR TABLE (NOT IN SOLUTION)
                 try
                 {
                     GenerateInstr(PUSHI, std::to_string(0));
@@ -1651,7 +1617,6 @@ void CParser::GetToken(CLexer& token)
 
 void CParser::SetError(const Error_CParser error, const Exp_Token_Type expToken)
 {
-    //***IMPORTANT NOTE SetErrorExpTokenType must be called before SetErrorType
     SetErrorExpTokenType(expToken);
     SetErrorType(error);
 }
