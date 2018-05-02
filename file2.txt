@@ -1,0 +1,12 @@
+%%
+int i,a,b,total;
+boolean switch;
+
+a = 3;
+b = 9;
+i = 1;
+
+total = a + b - i;
+
+get(total);
+return(total);
