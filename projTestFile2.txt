@@ -1,7 +1,6 @@
 %%
 
 int counter, max, total;
-boolean switch;
 max = 5;
 counter = 1;
 
